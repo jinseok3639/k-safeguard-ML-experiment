@@ -16,3 +16,4 @@
 | 2026-08-23 | `e1-20260823` | E1 코퍼스 스케일링 | 500→100k문장: tensify clean mutation 50.0%→6.4%(평평해짐) · liaison 86.3%→10.3% · cram 92.6%→74.5% · chosung 음절exact 0.131→0.152(불변) | `PROVISIONAL_DEV_ONLY` | [E1](./reports/E1_CORPUS_SCALING.md) |
 | 2026-08-23 | `e3-20260823` | E3 된소리 되돌림 판단 | thr 0.7에서 benign 7.35% / exact 0.744 (현행 정책 11.3% 대비 개선, 후보 9개→1개). 1% 바는 thr 0.999에서만 통과하나 exact 0.024로 붕괴 | `DO_NOT_PROMOTE` | [E3](./reports/E3_TENSIFY_DECISION.md) |
 | 2026-08-23 | `e6-20260823` | E6 n-gram 게이트 | liaison CER 0.124→0.041(게이트 없이), 게이트는 benign 34%→25%로만 줄임. cram CER 0.348→0.192. 어느 쪽도 1% 근처 못 감 | `DO_NOT_PROMOTE` | [E6](./reports/E6_GATE.md) |
+| 2026-08-23 | `e2-20260823` | E2 아키텍처 사다리 | **E1 결론 정정.** 8천문장에서 BiLSTM이 liaison 오변경 33.8%→5.9%, cram 72.1%→12.7% (선형 100k문장보다 좋음). chosung 음절exact 0.139→0.301. 병목은 코퍼스가 아니라 고정 창 표현력이었음. p95 5.1ms | `PROVISIONAL_DEV_ONLY` | [E2](./reports/E2_ARCHITECTURE.md) |
