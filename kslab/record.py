@@ -1,0 +1,232 @@
+"""run 기록 유틸 — manifest, 결정론적 JSON, 경로 격리 검사.
+
+저장소의 `experiments/benchmark/run_clean_baseline.py`가 쓰는 provenance 관행
+(git commit + dirty, 입력 파일 SHA-256, run-id 덮어쓰기 거부)을 그대로 옮겼다.
+
+경로 격리는 이 샌드박스 고유 규칙이다. `datasets`/`torch`의 기본 캐시는 사용자 홈이라,
+`env.ps1`을 건너뛰고 러너를 돌리면 폴더 밖에 수 GB가 조용히 쌓인다. 그래서 러너는 시작할 때
+`assert_paths_contained()`로 확인하고 아니면 즉시 멈춘다.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import platform
+import re
+import subprocess
+import sys
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parents[1]
+RESULTS_DIR = ROOT / "results"
+BASELINES_DIR = ROOT / "baselines"
+REPORTS_DIR = ROOT / "reports"
+DATA_DIR = ROOT / "data"
+KSAFEGUARD_ROOT = ROOT.parent / "k-safeguard"
+
+_RUN_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+# 폴더 밖으로 새면 안 되는 캐시 환경변수.
+_CONTAINED_ENV = ("HF_HOME", "HF_HUB_CACHE", "HF_DATASETS_CACHE", "TORCH_HOME")
+
+
+def validate_run_id(run_id: str) -> str:
+    if not run_id or not _RUN_ID_RE.match(run_id):
+        raise ValueError(f"run-id는 [A-Za-z0-9._-]+ 이어야 합니다: {run_id!r}")
+    return run_id
+
+
+def assert_paths_contained(strict: bool = True) -> dict[str, str]:
+    """캐시 경로가 전부 ML/ 하위인지 확인. 아니면 예외.
+
+    strict=False면 미설정 변수를 허용한다(그 라이브러리를 안 쓰는 실험용).
+    """
+    root = ROOT.resolve()
+    report: dict[str, str] = {}
+    problems: list[str] = []
+    for name in _CONTAINED_ENV:
+        value = os.environ.get(name)
+        if not value:
+            report[name] = "<unset>"
+            if strict:
+                problems.append(f"{name} 미설정")
+            continue
+        resolved = Path(value).resolve()
+        report[name] = str(resolved)
+        if root not in resolved.parents and resolved != root:
+            problems.append(f"{name}={resolved} 가 {root} 밖입니다")
+    if problems:
+        raise RuntimeError(
+            "캐시 경로가 샌드박스를 벗어납니다. 먼저 '. ./env.ps1' 을 실행하세요.\n  - "
+            + "\n  - ".join(problems)
+        )
+    return report
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _git(args: list[str], cwd: Path) -> str | None:
+    try:
+        out = subprocess.run(
+            ["git", *args], cwd=cwd, capture_output=True, text=True, timeout=15
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return out.stdout.strip() if out.returncode == 0 else None
+
+
+def git_metadata(repo: Path) -> dict[str, Any]:
+    """commit / branch / dirty. 저장소가 아니면 available=False."""
+    repo = Path(repo)
+    inside = _git(["rev-parse", "--is-inside-work-tree"], repo)
+    if inside != "true":
+        return {"available": False, "reason": "not_a_git_repo"}
+    commit = _git(["rev-parse", "HEAD"], repo)
+    if commit is None:
+        # 저장소는 있는데 커밋이 아직 없다 — git init 직후 상태.
+        return {"available": False, "reason": "no_commits_yet"}
+    status = _git(["status", "--porcelain"], repo)
+    return {
+        "available": True,
+        "commit": commit,
+        "branch": _git(["rev-parse", "--abbrev-ref", "HEAD"], repo),
+        "dirty": bool(status),
+    }
+
+
+def package_versions() -> dict[str, str]:
+    versions: dict[str, str] = {"python": sys.version.split()[0]}
+    for name in ("numpy", "scipy", "sklearn", "torch", "onnxruntime", "datasets"):
+        try:
+            module = __import__(name)
+        except ImportError:
+            continue
+        versions[name] = getattr(module, "__version__", "?")
+    return versions
+
+
+def dir_size_bytes(path: Path) -> int:
+    total = 0
+    for entry in Path(path).rglob("*"):
+        if entry.is_file():
+            try:
+                total += entry.stat().st_size
+            except OSError:
+                pass
+    return total
+
+
+@dataclass
+class Run:
+    """run 하나의 산출물 디렉터리와 manifest를 관리한다."""
+
+    run_id: str
+    experiment: str
+    config: dict[str, Any]
+    started_at: float
+    directory: Path
+    manifest: dict[str, Any]
+
+    @classmethod
+    def start(
+        cls,
+        run_id: str,
+        experiment: str,
+        config: dict[str, Any],
+        *,
+        strict_paths: bool = True,
+        results_dir: Path | None = None,
+    ) -> "Run":
+        validate_run_id(run_id)
+        paths = assert_paths_contained(strict=strict_paths)
+        base = Path(results_dir) if results_dir else RESULTS_DIR
+        directory = base / run_id
+        if directory.exists():
+            raise SystemExit(f"동일 run ID 결과가 이미 있습니다: {directory}")
+        directory.mkdir(parents=True)
+        manifest = {
+            "run_id": run_id,
+            "experiment": experiment,
+            "started_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "config": config,
+            "sandbox_git": git_metadata(ROOT),
+            "ksafeguard_git": git_metadata(KSAFEGUARD_ROOT),
+            "packages": package_versions(),
+            "cache_paths": paths,
+            "host": {
+                "platform": platform.platform(),
+                "cpu_count": os.cpu_count(),
+                "python_impl": platform.python_implementation(),
+            },
+        }
+        return cls(run_id, experiment, config, time.time(), directory, manifest)
+
+    def add_input(self, name: str, path: Path, rows: int | None = None) -> None:
+        entry: dict[str, Any] = {"path": str(path), "sha256": sha256_file(path)}
+        if rows is not None:
+            entry["rows"] = rows
+        self.manifest.setdefault("inputs", {})[name] = entry
+
+    def note(self, key: str, value: Any) -> None:
+        self.manifest.setdefault("notes", {})[key] = value
+
+    def write_json(self, name: str, payload: Any) -> Path:
+        """정렬된 결정론적 JSON. 같은 시드로 두 번 돌리면 바이트 단위로 같아야 한다."""
+        path = self.directory / name
+        path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        return path
+
+    def write_jsonl(self, name: str, rows: list[dict[str, Any]]) -> Path:
+        path = self.directory / name
+        with path.open("w", encoding="utf-8") as handle:
+            for row in rows:
+                handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+        return path
+
+    def write_text(self, name: str, text: str) -> Path:
+        path = self.directory / name
+        path.write_text(text, encoding="utf-8")
+        return path
+
+    def finish(self, metrics: dict[str, Any]) -> Path:
+        self.manifest["elapsed_seconds"] = round(time.time() - self.started_at, 3)
+        if DATA_DIR.exists():
+            self.manifest["data_dir_bytes"] = dir_size_bytes(DATA_DIR)
+        self.write_json("metrics.json", metrics)
+        return self.write_json("manifest.json", self.manifest)
+
+
+def publish_baseline(name: str, payload: dict[str, Any]) -> Path:
+    """집계 결과만 baselines/ 로 커밋한다. 원문이 든 산출물은 results/ 에 남는다."""
+    BASELINES_DIR.mkdir(parents=True, exist_ok=True)
+    path = BASELINES_DIR / name
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def append_ledger(row: str, ledger: Path | None = None) -> None:
+    """EXPERIMENTS.md 에 한 줄 추가."""
+    path = Path(ledger) if ledger else ROOT / "EXPERIMENTS.md"
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(row.rstrip() + "\n")
