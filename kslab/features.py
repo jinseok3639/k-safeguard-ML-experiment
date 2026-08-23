@@ -181,3 +181,18 @@ def targets_array(examples: Sequence[SlotExample], slot: int):
     import numpy as np
 
     return np.array([ex.target_slots[slot] for ex in examples], dtype=np.int64)
+
+
+def subsample(examples, cap: int, seed: int = 2026):
+    """슬롯 예제를 결정론적으로 cap개까지 줄인다.
+
+    E1이 재는 것은 '어휘 폭'이지 '기울기 스텝 수'가 아니다. 학습 예제 수를 고정한 채
+    문장 수만 늘리면, 10만 문장에서 뽑은 30만 슬롯(넓은 어휘)과 8천 문장에서 뽑은
+    30만 슬롯(좁고 반복적인 어휘)을 같은 계산량에서 비교할 수 있다.
+    """
+    import random as _random
+
+    if cap <= 0 or len(examples) <= cap:
+        return list(examples)
+    indices = sorted(_random.Random(seed).sample(range(len(examples)), cap))
+    return [examples[i] for i in indices]

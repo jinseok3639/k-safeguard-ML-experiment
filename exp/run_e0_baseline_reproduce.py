@@ -208,6 +208,7 @@ def main() -> None:
             "splits": metrics["splits"],
             "random_split_inflation_pp": inflation,
         },
+        run_id=args.run_id,
     )
     print(f"\n[E0] 완료 -> {run.directory}")
     for technique in TECHNIQUES:

@@ -214,8 +214,18 @@ class Run:
         return self.write_json("manifest.json", self.manifest)
 
 
-def publish_baseline(name: str, payload: dict[str, Any]) -> Path:
-    """집계 결과만 baselines/ 로 커밋한다. 원문이 든 산출물은 results/ 에 남는다."""
+SMOKE_MARKERS = ("smoke", "trial", "scratch")
+
+
+def publish_baseline(name: str, payload: dict[str, Any], run_id: str | None = None) -> Path | None:
+    """집계 결과만 baselines/ 로 커밋한다. 원문이 든 산출물은 results/ 에 남는다.
+
+    run_id에 smoke 표식이 있으면 발행하지 않는다. 스모크 실행이 진짜 baseline을 덮어쓰고
+    나중에 그게 정식 수치인 줄 알고 읽는 사고를 막는다.
+    """
+    if run_id and any(marker in run_id.lower() for marker in SMOKE_MARKERS):
+        print(f"[baseline] '{run_id}'는 스모크 실행이라 {name}을 발행하지 않습니다.")
+        return None
     BASELINES_DIR.mkdir(parents=True, exist_ok=True)
     path = BASELINES_DIR / name
     path.write_text(

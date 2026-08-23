@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Sequence
 
 import numpy as np
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, SGDClassifier
 
 from .. import features as F
 from ..jamo import N_CHO, N_JONG, N_JUNG, compose, decompose, is_syllable, split
@@ -30,9 +30,28 @@ class SlotRestorer:
     window: int = 4
     C: float = 2.0
     max_iter: int = 400
+    solver: str = "lbfgs"   # "lbfgs" = LogisticRegression, "sgd" = SGDClassifier(log_loss)
+    random_state: int = 2026
     vocab: F.CharVocab = field(default_factory=F.CharVocab)
-    heads: dict[int, LogisticRegression] = field(default_factory=dict)
+    heads: dict = field(default_factory=dict)
     _constant: dict[int, int] = field(default_factory=dict)
+
+    def _new_head(self, n_samples: int):
+        """추정기 하나. E1처럼 코퍼스만 바꾸며 곡선을 그릴 때는 전 구간에서 같은 것을 써야
+        한다 — 크기에 따라 추정기를 바꾸면 곡선이 코퍼스 효과인지 추정기 효과인지 갈린다."""
+        if self.solver == "sgd":
+            # 수십만 예제 규모에서 lbfgs 다항 로지스틱은 CPU로 감당이 안 된다.
+            # SGDClassifier의 alpha는 표본당 정규화 계수라 LogisticRegression의 C와
+            # 축이 다르다. alpha = 1/(C*n) 이어야 같은 세기가 된다 — 1/C 를 그대로
+            # 넣으면 수십만 배 과정규화돼서 모델이 다수결만 찍는다.
+            return SGDClassifier(
+                loss="log_loss",
+                alpha=1.0 / max(self.C * max(n_samples, 1), 1e-12),
+                max_iter=self.max_iter,
+                tol=1e-4,
+                random_state=self.random_state,
+            )
+        return LogisticRegression(max_iter=self.max_iter, C=self.C)
 
     @property
     def unknown_slots(self) -> tuple[int, ...]:
@@ -54,7 +73,7 @@ class SlotRestorer:
                 # 한 클래스뿐이면 LogisticRegression이 학습을 거부한다. 상수 예측기로 대체.
                 self._constant[slot] = int(classes[0])
                 continue
-            model = LogisticRegression(max_iter=self.max_iter, C=self.C)
+            model = self._new_head(int(mask.sum()))
             model.fit(matrix[mask], y_slot)
             self.heads[slot] = model
         return self
@@ -79,6 +98,38 @@ class SlotRestorer:
             slot: model.predict_proba(matrix)
             for slot, model in self.heads.items()
         }
+
+    def restore_many(self, texts: Sequence[str]) -> list[tuple[str, list[float]]]:
+        """여러 문장을 한 번에 복원. 문장마다 따로 predict하면 sklearn 호출 오버헤드가
+        지배해서 E1처럼 수만 건을 도는 실험이 몇 배로 느려진다."""
+        from .. import pairs as _pairs
+        from ..jamo import join
+
+        pairs = [_pairs.Pair("_", "_", self.technique, 1.0, t, t) for t in texts]
+        examples = F.extract_examples(pairs, window=self.window)
+        results: list[list[str]] = [list(t) for t in texts]
+        confidences: list[list[float]] = [[] for _ in texts]
+        if not examples:
+            return [("".join(c), conf) for c, conf in zip(results, confidences)]
+
+        predicted = self.predict_slots(examples)
+        probs = self.predict_proba_slots(examples) if self.heads else {}
+        for row, ex in enumerate(examples):
+            conf = 1.0
+            for slot in self.unknown_slots:
+                if slot not in probs:
+                    continue
+                model = self.heads[slot]
+                target = predicted[row, slot]
+                idx = int(np.searchsorted(model.classes_, target))
+                if idx < len(model.classes_) and model.classes_[idx] == target:
+                    conf *= float(probs[slot][row, idx])
+            confidences[ex.sentence_index].append(conf)
+            cho, jung, jong = (int(v) for v in predicted[row])
+            if min(cho, jung, jong) < 0:
+                continue
+            results[ex.sentence_index][ex.char_index] = join(cho, jung, jong)
+        return [("".join(chars), conf) for chars, conf in zip(results, confidences)]
 
     def restore(self, text: str) -> tuple[str, list[float]]:
         """문자열 하나를 복원. (복원문, 후보 위치별 confidence) 반환.
