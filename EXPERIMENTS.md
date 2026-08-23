@@ -19,3 +19,4 @@
 | 2026-08-23 | `e2-20260823` | E2 아키텍처 사다리 | **E1 결론 정정.** 8천문장에서 BiLSTM이 liaison 오변경 33.8%→5.9%, cram 72.1%→12.7% (선형 100k문장보다 좋음). chosung 음절exact 0.139→0.301. 병목은 코퍼스가 아니라 고정 창 표현력이었음. p95 5.1ms | `PROVISIONAL_DEV_ONLY` | [E2](./reports/E2_ARCHITECTURE.md) |
 | 2026-08-23 | `e4-20260823` | E4 초성체 사각지대 | 사전이 못 푸는 17단어 전부 **시도는** 하나 **0/17 정답**. 문장 안에서도 음절exact 0.250(mlp)/top3 0.581. 틀릴 때 그럴듯한 다른 한국어를 만들어냄 — FP 주입 위험 | `DO_NOT_PROMOTE` | [E4](./reports/E4_CHOSUNG_SLOTS.md) |
 | 2026-08-23 | `e7-20260823` | E7 provider 계약·ONNX·지연 | 실제 Gateway에서 계약 위반 0건(view 254 / 후보 94) · ONNX 3종 torch와 정확히 일치(각 ~1.1MB) · p95 **4.7ms**(예산 100ms) | `CONTRACT_OK` | [E7](./reports/E7_PROVIDER_PROTOTYPE.md) |
+| 2026-08-23 | `e8-mlp-30k` | E8 아키텍처 × abstention | **처음으로 두 기준 동시 통과.** tensify thr 0.999999에서 오변경 0.49%(1/204) + CER −11.84%p, 난독문장 99% 손댐. 단 benign 204개는 해상도 0.49%·0건이어도 CI 상한 1.85% → 400개 이상으로 재측정 필요 | `PROMOTE_CANDIDATE` (조건부) | [E8](./reports/E8_ABSTENTION.md) |
