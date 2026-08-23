@@ -1,0 +1,478 @@
+{
+  "compound_finals": {
+    "cases": 12,
+    "failures": [],
+    "note": "disparity 원본은 이 12건 전부에서 변환이 발동하지 않았다.",
+    "passed": 12
+  },
+  "edge_cases": {
+    "break_spacing": {
+      "' '": {
+        "ok": true,
+        "output": ""
+      },
+      "'!!!'": {
+        "ok": true,
+        "output": "!!!"
+      },
+      "''": {
+        "ok": true,
+        "output": ""
+      },
+      "'abc 123'": {
+        "ok": true,
+        "output": "abc123"
+      },
+      "'ㅋㅋㅋ'": {
+        "ok": true,
+        "output": "ㅋㅋㅋ"
+      },
+      "'ㅏㅑㅓ'": {
+        "ok": true,
+        "output": "ㅏㅑㅓ"
+      },
+      "'가'": {
+        "ok": true,
+        "output": "가"
+      },
+      "'강아지'": {
+        "ok": true,
+        "output": "강아지"
+      },
+      "'한글Abc123!?'": {
+        "ok": true,
+        "output": "한글Abc123!?"
+      }
+    },
+    "chosung": {
+      "' '": {
+        "ok": true,
+        "output": " "
+      },
+      "'!!!'": {
+        "ok": true,
+        "output": "!!!"
+      },
+      "''": {
+        "ok": true,
+        "output": ""
+      },
+      "'abc 123'": {
+        "ok": true,
+        "output": "abc 123"
+      },
+      "'ㅋㅋㅋ'": {
+        "ok": true,
+        "output": "ㅋㅋㅋ"
+      },
+      "'ㅏㅑㅓ'": {
+        "ok": true,
+        "output": "ㅏㅑㅓ"
+      },
+      "'가'": {
+        "ok": true,
+        "output": "ㄱ"
+      },
+      "'강아지'": {
+        "ok": true,
+        "output": "ㄱㅇㅈ"
+      },
+      "'한글Abc123!?'": {
+        "ok": true,
+        "output": "ㅎㄱAbc123!?"
+      }
+    },
+    "jamo_decompose": {
+      "' '": {
+        "ok": true,
+        "output": " "
+      },
+      "'!!!'": {
+        "ok": true,
+        "output": "!!!"
+      },
+      "''": {
+        "ok": true,
+        "output": ""
+      },
+      "'abc 123'": {
+        "ok": true,
+        "output": "abc 123"
+      },
+      "'ㅋㅋㅋ'": {
+        "ok": true,
+        "output": "ㅋㅋㅋ"
+      },
+      "'ㅏㅑㅓ'": {
+        "ok": true,
+        "output": "ㅏㅑㅓ"
+      },
+      "'가'": {
+        "ok": true,
+        "output": "ㄱㅏ"
+      },
+      "'강아지'": {
+        "ok": true,
+        "output": "ㄱㅏㅇㅇㅏㅈㅣ"
+      },
+      "'한글Abc123!?'": {
+        "ok": true,
+        "output": "ㅎㅏㄴㄱㅡㄹAbc123!?"
+      }
+    },
+    "jongseong_cram": {
+      "' '": {
+        "ok": true,
+        "output": " "
+      },
+      "'!!!'": {
+        "ok": true,
+        "output": "!!!"
+      },
+      "''": {
+        "ok": true,
+        "output": ""
+      },
+      "'abc 123'": {
+        "ok": true,
+        "output": "abc 123"
+      },
+      "'ㅋㅋㅋ'": {
+        "ok": true,
+        "output": "ㅋㅋㅋ"
+      },
+      "'ㅏㅑㅓ'": {
+        "ok": true,
+        "output": "ㅏㅑㅓ"
+      },
+      "'가'": {
+        "ok": true,
+        "output": "강"
+      },
+      "'강아지'": {
+        "ok": true,
+        "output": "갈압짐"
+      },
+      "'한글Abc123!?'": {
+        "ok": true,
+        "output": "학금Abc123!?"
+      }
+    },
+    "liaison": {
+      "' '": {
+        "ok": true,
+        "output": " "
+      },
+      "'!!!'": {
+        "ok": true,
+        "output": "!!!"
+      },
+      "''": {
+        "ok": true,
+        "output": ""
+      },
+      "'abc 123'": {
+        "ok": true,
+        "output": "abc 123"
+      },
+      "'ㅋㅋㅋ'": {
+        "ok": true,
+        "output": "ㅋㅋㅋ"
+      },
+      "'ㅏㅑㅓ'": {
+        "ok": true,
+        "output": "ㅏㅑㅓ"
+      },
+      "'가'": {
+        "ok": true,
+        "output": "가"
+      },
+      "'강아지'": {
+        "ok": true,
+        "output": "강아지"
+      },
+      "'한글Abc123!?'": {
+        "ok": true,
+        "output": "한글Abc123!?"
+      }
+    },
+    "palatalize": {
+      "' '": {
+        "ok": true,
+        "output": " "
+      },
+      "'!!!'": {
+        "ok": true,
+        "output": "!!!"
+      },
+      "''": {
+        "ok": true,
+        "output": ""
+      },
+      "'abc 123'": {
+        "ok": true,
+        "output": "abc 123"
+      },
+      "'ㅋㅋㅋ'": {
+        "ok": true,
+        "output": "ㅋㅋㅋ"
+      },
+      "'ㅏㅑㅓ'": {
+        "ok": true,
+        "output": "ㅏㅑㅓ"
+      },
+      "'가'": {
+        "ok": true,
+        "output": "가"
+      },
+      "'강아지'": {
+        "ok": true,
+        "output": "강아지"
+      },
+      "'한글Abc123!?'": {
+        "ok": true,
+        "output": "한글Abc123!?"
+      }
+    },
+    "tensify": {
+      "' '": {
+        "ok": true,
+        "output": " "
+      },
+      "'!!!'": {
+        "ok": true,
+        "output": "!!!"
+      },
+      "''": {
+        "ok": true,
+        "output": ""
+      },
+      "'abc 123'": {
+        "ok": true,
+        "output": "abc 123"
+      },
+      "'ㅋㅋㅋ'": {
+        "ok": true,
+        "output": "ㅋㅋㅋ"
+      },
+      "'ㅏㅑㅓ'": {
+        "ok": true,
+        "output": "ㅏㅑㅓ"
+      },
+      "'가'": {
+        "ok": true,
+        "output": "까"
+      },
+      "'강아지'": {
+        "ok": true,
+        "output": "깡아찌"
+      },
+      "'한글Abc123!?'": {
+        "ok": true,
+        "output": "한끌Abc123!?"
+      }
+    },
+    "zwsp_inject": {
+      "' '": {
+        "ok": true,
+        "output": " "
+      },
+      "'!!!'": {
+        "ok": true,
+        "output": "!!!"
+      },
+      "''": {
+        "ok": true,
+        "output": ""
+      },
+      "'abc 123'": {
+        "ok": true,
+        "output": "abc 123"
+      },
+      "'ㅋㅋㅋ'": {
+        "ok": true,
+        "output": "ㅋㅋㅋ"
+      },
+      "'ㅏㅑㅓ'": {
+        "ok": true,
+        "output": "ㅏㅑㅓ"
+      },
+      "'가'": {
+        "ok": true,
+        "output": "가​"
+      },
+      "'강아지'": {
+        "ok": true,
+        "output": "강​아​지​"
+      },
+      "'한글Abc123!?'": {
+        "ok": true,
+        "output": "한​글​Abc123!?"
+      }
+    }
+  },
+  "edge_cases_all_ok": true,
+  "per_transform": {
+    "break_spacing": {
+      "declared_length_preserving": false,
+      "deterministic": true,
+      "family": "visual",
+      "intensity_0.3": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 0.0019801980198019802
+      },
+      "intensity_0.5": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 1.0,
+        "same_length_rate": 0.0
+      },
+      "intensity_1.0": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 1.0,
+        "same_length_rate": 0.0
+      }
+    },
+    "chosung": {
+      "declared_length_preserving": true,
+      "deterministic": true,
+      "family": "visual",
+      "intensity_0.3": {
+        "changed_char_rate": 0.20353108216556579,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      },
+      "intensity_0.5": {
+        "changed_char_rate": 0.34057657880116055,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      },
+      "intensity_1.0": {
+        "changed_char_rate": 0.6800419778998703,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      }
+    },
+    "jamo_decompose": {
+      "declared_length_preserving": false,
+      "deterministic": true,
+      "family": "visual",
+      "intensity_0.3": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 0.0019801980198019802
+      },
+      "intensity_0.5": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 0.0019801980198019802
+      },
+      "intensity_1.0": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 0.0019801980198019802
+      }
+    },
+    "jongseong_cram": {
+      "declared_length_preserving": true,
+      "deterministic": true,
+      "family": "phonetic",
+      "intensity_0.3": {
+        "changed_char_rate": 0.20353108216556579,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      },
+      "intensity_0.5": {
+        "changed_char_rate": 0.34057657880116055,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      },
+      "intensity_1.0": {
+        "changed_char_rate": 0.6800419778998703,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      }
+    },
+    "liaison": {
+      "declared_length_preserving": true,
+      "deterministic": true,
+      "family": "phonetic",
+      "intensity_0.3": {
+        "changed_char_rate": 0.03086610284585468,
+        "fire_rate": 0.47326732673267324,
+        "same_length_rate": 1.0
+      },
+      "intensity_0.5": {
+        "changed_char_rate": 0.0408667201679116,
+        "fire_rate": 0.47326732673267324,
+        "same_length_rate": 1.0
+      },
+      "intensity_1.0": {
+        "changed_char_rate": 0.09543798999938267,
+        "fire_rate": 0.801980198019802,
+        "same_length_rate": 1.0
+      }
+    },
+    "palatalize": {
+      "declared_length_preserving": true,
+      "deterministic": true,
+      "family": "phonetic",
+      "intensity_0.3": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.0,
+        "same_length_rate": 1.0
+      },
+      "intensity_0.5": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.0,
+        "same_length_rate": 1.0
+      },
+      "intensity_1.0": {
+        "changed_char_rate": 0.0011111797024507685,
+        "fire_rate": 0.01782178217821782,
+        "same_length_rate": 1.0
+      }
+    },
+    "tensify": {
+      "declared_length_preserving": true,
+      "deterministic": true,
+      "family": "phonetic",
+      "intensity_0.3": {
+        "changed_char_rate": 0.08661028458546824,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      },
+      "intensity_0.5": {
+        "changed_char_rate": 0.14346564602753256,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      },
+      "intensity_1.0": {
+        "changed_char_rate": 0.28754861411198224,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 1.0
+      }
+    },
+    "zwsp_inject": {
+      "declared_length_preserving": false,
+      "deterministic": true,
+      "family": "visual",
+      "intensity_0.3": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 0.0019801980198019802
+      },
+      "intensity_0.5": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 0.0019801980198019802
+      },
+      "intensity_1.0": {
+        "changed_char_rate": 0.0,
+        "fire_rate": 0.998019801980198,
+        "same_length_rate": 0.0019801980198019802
+      }
+    }
+  },
+  "run_id": "e5a-20260823"
+}

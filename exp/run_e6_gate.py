@@ -149,14 +149,26 @@ def main() -> None:
         clusters = [s.seed_id for s in seeds]
 
         def _measure(restore_benign, restore_obf):
-            exact = [
-                (clusters[i], float(restore_obf[i] == clean_texts[i])) for i in changed_idx
-            ]
+            # 문장 단위 exact는 연음·크래밍처럼 한 문장에서 여러 자리가 바뀌는 기법에서는
+            # 거의 항상 0이라 분별력이 없다. CER 감소폭을 주 지표로 함께 본다.
+            exact, residual, raw, gain = [], [], [], []
+            for i in changed_idx:
+                cluster = clusters[i]
+                exact.append((cluster, float(restore_obf[i] == clean_texts[i])))
+                r_cer = M.char_error_rate(clean_texts[i], restore_obf[i])
+                o_cer = M.char_error_rate(clean_texts[i], obf[i])
+                residual.append((cluster, r_cer))
+                raw.append((cluster, o_cer))
+                gain.append((cluster, o_cer - r_cer))
+            summarize = lambda obs: M.summarize_observations(
+                obs, args.bootstrap_samples, args.random_seed
+            )
             return {
                 "benign_clean_mutation": M.clean_mutation_rate(benign_texts, restore_benign),
-                "exact_restoration": M.summarize_observations(
-                    exact, args.bootstrap_samples, args.random_seed
-                ),
+                "exact_restoration": summarize(exact),
+                "residual_cer": summarize(residual),
+                "raw_cer": summarize(raw),
+                "cer_reduction": summarize(gain),
             }
 
         ungated_benign = [r[0] for r in model.restore_many(benign_texts)]
@@ -171,11 +183,13 @@ def main() -> None:
                 G.gated_restore(model, gate, benign_texts),
                 G.gated_restore(model, gate, obf),
             )
+            row = metrics["end_to_end"][technique]["gated"][f"{threshold:.1f}"]
             print(
                 f"       thr={threshold:4.1f} benign mutation "
-                f"{metrics['end_to_end'][technique]['gated'][f'{threshold:.1f}']['benign_clean_mutation']['sentence_rate']:6.2%}"
-                f" exact "
-                f"{metrics['end_to_end'][technique]['gated'][f'{threshold:.1f}']['exact_restoration']['cluster_balanced_estimate'] or 0:.3f}",
+                f"{row['benign_clean_mutation']['sentence_rate']:6.2%}"
+                f"  CER {row['raw_cer']['cluster_balanced_estimate'] or 0:.3f}"
+                f"->{row['residual_cer']['cluster_balanced_estimate'] or 0:.3f}"
+                f"  exact {row['exact_restoration']['cluster_balanced_estimate'] or 0:.3f}",
                 flush=True,
             )
 
@@ -237,21 +251,30 @@ def _report(metrics: dict, args: argparse.Namespace) -> str:
     lines += ["", "## 복원기 + 게이트 (end-to-end)", ""]
     for technique, entry in metrics["end_to_end"].items():
         ungated = entry["ungated"]
+        def _cells(row):
+            return (
+                f"{row['benign_clean_mutation']['sentence_rate']:.1%}",
+                f"{row['residual_cer']['cluster_balanced_estimate'] or 0:.4f}",
+                f"{(row['cer_reduction']['cluster_balanced_estimate'] or 0) * 100:+.2f}%p",
+                f"{row['exact_restoration']['cluster_balanced_estimate'] or 0:.3f}",
+            )
+
+        raw_cer = ungated["raw_cer"]["cluster_balanced_estimate"] or 0
         lines += [
             f"### {technique}",
             "",
-            "| 설정 | benign clean mutation | exact restoration |",
-            "|---|---|---|",
-            f"| 게이트 없음 | {ungated['benign_clean_mutation']['sentence_rate']:.1%} | "
-            f"{ungated['exact_restoration']['cluster_balanced_estimate'] or 0:.3f} |",
+            f"난독화 원본 CER {raw_cer:.4f}. CER 감소폭이 양수여야 복원이 도움이 된 것이다.",
+            "",
+            "| 설정 | benign clean mutation | residual CER | CER 감소 | exact |",
+            "|---|---|---|---|---|",
+            "| 게이트 없음 | " + " | ".join(_cells(ungated)) + " |",
         ]
         for threshold, row in entry["gated"].items():
             mutation = row["benign_clean_mutation"]["sentence_rate"]
             mark = " ✅" if mutation <= PROMOTION_MUTATION_BAR else ""
-            lines.append(
-                f"| 임계값 {threshold} | {mutation:.1%}{mark} | "
-                f"{row['exact_restoration']['cluster_balanced_estimate'] or 0:.3f} |"
-            )
+            cells = list(_cells(row))
+            cells[0] += mark
+            lines.append(f"| 임계값 {threshold} | " + " | ".join(cells) + " |")
         lines.append("")
 
     lines += [

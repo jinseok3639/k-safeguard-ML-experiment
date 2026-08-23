@@ -28,6 +28,9 @@ from kslab.models.decision import TensifyDecider, current_policy_candidates
 INTENSITIES = (0.3, 0.5, 1.0)
 THRESHOLDS = (0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.98, 0.99, 0.995, 0.999)
 PROMOTION_MUTATION_BAR = 0.01
+# 오변경 기준만 보면 "아무것도 안 하는" 임계값이 늘 통과한다. 승격에는 실제로 쓸모가
+# 있어야 하므로 최소 복원율을 함께 요구한다.
+PROMOTION_MIN_EXACT = 0.50
 
 # 정상 한국어인데 된소리가 들어 있는 어휘. 이 문장들을 건드리면 곧바로 오탐이 된다.
 NATIVE_TENSE_PROBES = (
@@ -55,6 +58,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bootstrap-samples", type=int, default=2000)
     parser.add_argument("--random-seed", type=int, default=2026)
     parser.add_argument("--gen-seed", type=int, default=1234)
+    parser.add_argument("--min-exact", type=float, default=PROMOTION_MIN_EXACT)
     return parser.parse_args()
 
 
@@ -164,21 +168,37 @@ def main() -> None:
     sweep = _sweep(decider, seeds, args)
     reference = _current_policy_reference(seeds)
 
-    passing = [
-        t for t, r in sweep.items()
-        if r["benign_clean_mutation"]["sentence_rate"] <= PROMOTION_MUTATION_BAR
-    ]
-    best = None
-    if passing:
-        # 기준을 통과하는 것들 중 회복률이 가장 높은 임계값
-        best = max(
-            passing, key=lambda t: sweep[t]["exact_restoration"]["cluster_balanced_estimate"] or 0
-        )
+    def _exact(t):
+        return sweep[t]["exact_restoration"]["cluster_balanced_estimate"] or 0.0
+
+    def _mutation(t):
+        return sweep[t]["benign_clean_mutation"]["sentence_rate"]
+
+    passing_mutation = [t for t in sweep if _mutation(t) <= PROMOTION_MUTATION_BAR]
+    passing_both = [t for t in passing_mutation if _exact(t) >= args.min_exact]
+    best = max(passing_both, key=_exact) if passing_both else None
+
+    # 두 기준을 동시에 못 넘더라도, 어디까지가 가능한 경계인지는 기록해 둔다.
+    frontier = {
+        "best_exact_at_any_mutation": max(sweep, key=_exact),
+        "lowest_mutation_at_any_exact": min(sweep, key=_mutation),
+        "best_exact_under_mutation_bar": (
+            max(passing_mutation, key=_exact) if passing_mutation else None
+        ),
+    }
+    # 현행 정책 대비: benign을 건드리는 비율이 더 낮으면서 후보도 1개인 임계값
+    better_than_current = sorted(
+        t for t in sweep if _mutation(t) <= reference["benign_activation_rate"]
+    )
 
     metrics = {
         "sweep": sweep,
         "current_policy_reference": reference,
-        "thresholds_passing_mutation_bar": sorted(passing),
+        "thresholds_passing_mutation_bar": sorted(passing_mutation),
+        "thresholds_passing_both_bars": sorted(passing_both),
+        "thresholds_better_than_current_policy": better_than_current,
+        "frontier": frontier,
+        "promotion_min_exact": args.min_exact,
         "recommended_threshold": best,
         "status": "PROMOTE_CANDIDATE" if best else "DO_NOT_PROMOTE",
     }
@@ -199,6 +219,8 @@ def main() -> None:
             f"  정상된소리 오변경 {row['native_tense_probe_mutated']}/{len(NATIVE_TENSE_PROBES)}"
         )
     print(f"  => 판정 {metrics['status']} (권장 임계값 {best})")
+    print(f"     오변경 기준만 통과: {metrics['thresholds_passing_mutation_bar']}")
+    print(f"     현행 정책보다 benign을 덜 건드리는 임계값: {better_than_current}")
 
 
 def _report(metrics: dict, args: argparse.Namespace) -> str:
@@ -250,14 +272,33 @@ def _report(metrics: dict, args: argparse.Namespace) -> str:
         "",
         "## 판정",
         "",
-        f"- clean mutation <= {PROMOTION_MUTATION_BAR:.0%} 를 통과한 임계값: "
-        f"{metrics['thresholds_passing_mutation_bar'] or '없음'}",
+        f"- 승격 기준: clean mutation <= {PROMOTION_MUTATION_BAR:.0%} **그리고** "
+        f"exact restoration >= {metrics['promotion_min_exact']:.0%}.",
+        "  오변경 기준만 걸면 '아무것도 안 하는' 임계값이 항상 통과하므로 쓸모 기준을 함께 건다.",
+        f"- 오변경 기준만 통과: {metrics['thresholds_passing_mutation_bar'] or '없음'}",
+        f"- 두 기준 모두 통과: {metrics['thresholds_passing_both_bars'] or '**없음**'}",
         f"- 권장 임계값: {metrics['recommended_threshold'] or '없음'}",
+        "",
+        "### 가능한 경계 (Pareto)",
+        "",
+        f"- 복원율 최대: 임계값 {metrics['frontier']['best_exact_at_any_mutation']}",
+        f"- 오변경 최소: 임계값 {metrics['frontier']['lowest_mutation_at_any_exact']}",
+        f"- 오변경 기준 안에서 복원율 최대: "
+        f"{metrics['frontier']['best_exact_under_mutation_bar'] or '없음'}",
+        "",
+        "### 현행 정책과의 비교",
+        "",
+        f"현행 정책은 benign의 {metrics['current_policy_reference']['benign_activation_rate']:.1%}"
+        f"에서 후보를 만든다. 이보다 benign을 **덜** 건드리면서 후보는 1개만 내는 임계값: "
+        f"{metrics['thresholds_better_than_current_policy'] or '없음'}",
     ]
     if metrics["status"] == "DO_NOT_PROMOTE":
         lines += [
-            "- 어떤 임계값도 clean mutation 기준을 통과하지 못했다. 후보 수를 1개로 줄이는",
-            "  것만으로는 부족하고, 어휘 폭이나 아키텍처를 더 밀어야 한다.",
+            "",
+            "두 기준을 동시에 넘는 임계값이 없다. 오변경을 1% 아래로 누르려면 abstention을",
+            "너무 크게 걸어야 하고, 그러면 복원율이 무너진다. 후보를 1개로 줄이는 것만으로는",
+            "부족하며, 위치별 판단 위에 **활성화 게이트**를 더 얹거나(E6 방식) 더 강한",
+            "표현력이 필요하다.",
         ]
     lines += [
         "",
