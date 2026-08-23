@@ -65,8 +65,23 @@ def _export_onnx(model: MlpSlotRestorer, path: Path, examples) -> dict:
         torch.from_numpy(slots),
     )
     slot_names = [str(s) for s in model.unknown_slots]
+
+    class _TupleWrapper(torch.nn.Module):
+        """net이 {슬롯번호: 텐서} dict를 돌려주는데, int 키가 추적 대상이 아니라
+        ONNX tracer가 거부한다. 순서를 고정한 tuple로 감싼다."""
+
+        def __init__(self, net, slots):
+            super().__init__()
+            self.net = net
+            self.slots = list(slots)
+
+        def forward(self, chars, pos, slots):
+            out = self.net(chars, pos, slots)
+            return tuple(out[s] for s in self.slots)
+
+    exportable = _TupleWrapper(model.net, model.unknown_slots).eval()
     torch.onnx.export(
-        model.net,
+        exportable,
         sample,
         str(path),
         input_names=["chars", "pos", "slots"],

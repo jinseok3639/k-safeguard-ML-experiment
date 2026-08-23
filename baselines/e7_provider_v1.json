@@ -1,0 +1,69 @@
+{
+  "contract": {
+    "candidates_seen": 94,
+    "contract_ok": true,
+    "has_name": true,
+    "has_no_verdict_method": true,
+    "isinstance_candidate_provider": true,
+    "views_seen": 254,
+    "violations": []
+  },
+  "latency_budget_ok": true,
+  "latency_ms": {
+    "chosung_restore_only": {
+      "n": 360,
+      "p50": 0.0610999995842576,
+      "p95": 0.07459998596459627,
+      "p99": 0.08829997386783361
+    },
+    "liaison_restore_only": {
+      "n": 360,
+      "p50": 1.7602000152692199,
+      "p95": 3.1992000294849277,
+      "p99": 3.4273999044671655
+    },
+    "provider_generate_all_techniques": {
+      "n": 360,
+      "p50": 2.74860009085387,
+      "p95": 4.700899939052761,
+      "p99": 6.52789999730885
+    },
+    "tensify_restore_only": {
+      "n": 360,
+      "p50": 0.16069994308054447,
+      "p95": 1.4376998879015446,
+      "p99": 1.733900047838688
+    }
+  },
+  "onnx": {
+    "chosung": {
+      "bytes": 1099372,
+      "matches_torch": true,
+      "max_abs_diff_vs_torch": 2.86102294921875e-06,
+      "path": "chosung.onnx",
+      "providers": [
+        "CPUExecutionProvider"
+      ]
+    },
+    "liaison": {
+      "bytes": 1140708,
+      "matches_torch": true,
+      "max_abs_diff_vs_torch": 4.76837158203125e-06,
+      "path": "liaison.onnx",
+      "providers": [
+        "CPUExecutionProvider"
+      ]
+    },
+    "tensify": {
+      "bytes": 1139718,
+      "matches_torch": true,
+      "max_abs_diff_vs_torch": 3.814697265625e-06,
+      "path": "tensify.onnx",
+      "providers": [
+        "CPUExecutionProvider"
+      ]
+    }
+  },
+  "run_id": "e7-20260823",
+  "status": "CONTRACT_OK"
+}

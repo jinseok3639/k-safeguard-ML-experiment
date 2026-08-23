@@ -1,0 +1,303 @@
+{
+  "architectures": {
+    "linear": {
+      "blind_spots": {
+        "repeated_initials": {
+          "attempted": 9,
+          "exact_word_hits": 0,
+          "samples": [
+            {
+              "obfuscated": "ㅈㅈ",
+              "restored": "정정",
+              "word": "제조"
+            },
+            {
+              "obfuscated": "ㅂㅂ",
+              "restored": "불부",
+              "word": "방법"
+            },
+            {
+              "obfuscated": "ㅅㅅ",
+              "restored": "세성",
+              "word": "사살"
+            },
+            {
+              "obfuscated": "ㄱㄱ",
+              "restored": "구궁",
+              "word": "가공"
+            },
+            {
+              "obfuscated": "ㄱㄱ",
+              "restored": "구궁",
+              "word": "구글"
+            },
+            {
+              "obfuscated": "ㄴㄴ",
+              "restored": "나난",
+              "word": "노노"
+            }
+          ],
+          "syllable_accuracy": 0.05555555555555555,
+          "words": 9
+        },
+        "two_syllable": {
+          "attempted": 8,
+          "exact_word_hits": 0,
+          "samples": [
+            {
+              "obfuscated": "ㅍㅌ",
+              "restored": "포탕",
+              "word": "폭탄"
+            },
+            {
+              "obfuscated": "ㅁㄱ",
+              "restored": "명구",
+              "word": "무기"
+            },
+            {
+              "obfuscated": "ㅁㅇ",
+              "restored": "명이",
+              "word": "마약"
+            },
+            {
+              "obfuscated": "ㅎㅋ",
+              "restored": "하카",
+              "word": "해킹"
+            },
+            {
+              "obfuscated": "ㅌㅇ",
+              "restored": "토이",
+              "word": "탈옥"
+            },
+            {
+              "obfuscated": "ㅇㅎ",
+              "restored": "영하",
+              "word": "우회"
+            }
+          ],
+          "syllable_accuracy": 0.0,
+          "words": 8
+        }
+      },
+      "clean_mutation_benign": {
+        "char_rate": 0.0,
+        "mutated": 0,
+        "sentence_rate": 0.0,
+        "sentences": 204
+      },
+      "restoration": {
+        "cer_reduction": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.08043370240892019,
+          "ci95_low": 0.07334172379142416,
+          "cluster_balanced_estimate": 0.07694745845176508,
+          "clusters": 505,
+          "micro_estimate": 0.07694745845176508,
+          "rows": 1010
+        },
+        "exact_restoration": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.005940594059405941,
+          "ci95_low": 0.0,
+          "cluster_balanced_estimate": 0.0019801980198019802,
+          "clusters": 505,
+          "micro_estimate": 0.0019801980198019802,
+          "rows": 1010
+        },
+        "raw_cer": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.5254688812239581,
+          "ci95_low": 0.5153571332911339,
+          "cluster_balanced_estimate": 0.5206170179823808,
+          "clusters": 505,
+          "micro_estimate": 0.5206170179823808,
+          "rows": 1010
+        },
+        "residual_cer": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.44942969996550686,
+          "ci95_low": 0.43790809571153727,
+          "cluster_balanced_estimate": 0.4436695595306157,
+          "clusters": 505,
+          "micro_estimate": 0.4436695595306157,
+          "rows": 1010
+        }
+      },
+      "slot_accuracy_changed_only": {
+        "cho": 1.0,
+        "jong": 0.5534990624810984,
+        "jung": 0.26583197241879875,
+        "n": 16533,
+        "syllable_exact": 0.15248291296195488
+      },
+      "topk_slot_recovery": {
+        "top1": 0.15248291296195488,
+        "top2": 0.3339381842375854,
+        "top3": 0.4757757212847033
+      }
+    },
+    "mlp": {
+      "blind_spots": {
+        "repeated_initials": {
+          "attempted": 9,
+          "exact_word_hits": 0,
+          "samples": [
+            {
+              "obfuscated": "ㅈㅈ",
+              "restored": "저자",
+              "word": "제조"
+            },
+            {
+              "obfuscated": "ㅂㅂ",
+              "restored": "바부",
+              "word": "방법"
+            },
+            {
+              "obfuscated": "ㅅㅅ",
+              "restored": "사싱",
+              "word": "사살"
+            },
+            {
+              "obfuscated": "ㄱㄱ",
+              "restored": "공구",
+              "word": "가공"
+            },
+            {
+              "obfuscated": "ㄱㄱ",
+              "restored": "공구",
+              "word": "구글"
+            },
+            {
+              "obfuscated": "ㄴㄴ",
+              "restored": "내노",
+              "word": "노노"
+            }
+          ],
+          "syllable_accuracy": 0.16666666666666666,
+          "words": 9
+        },
+        "two_syllable": {
+          "attempted": 8,
+          "exact_word_hits": 0,
+          "samples": [
+            {
+              "obfuscated": "ㅍㅌ",
+              "restored": "파트",
+              "word": "폭탄"
+            },
+            {
+              "obfuscated": "ㅁㄱ",
+              "restored": "미국",
+              "word": "무기"
+            },
+            {
+              "obfuscated": "ㅁㅇ",
+              "restored": "무이",
+              "word": "마약"
+            },
+            {
+              "obfuscated": "ㅎㅋ",
+              "restored": "호코",
+              "word": "해킹"
+            },
+            {
+              "obfuscated": "ㅌㅇ",
+              "restored": "테이",
+              "word": "탈옥"
+            },
+            {
+              "obfuscated": "ㅇㅎ",
+              "restored": "여화",
+              "word": "우회"
+            }
+          ],
+          "syllable_accuracy": 0.0625,
+          "words": 8
+        }
+      },
+      "clean_mutation_benign": {
+        "char_rate": 0.0,
+        "mutated": 0,
+        "sentence_rate": 0.0,
+        "sentences": 204
+      },
+      "restoration": {
+        "cer_reduction": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.1320650091896792,
+          "ci95_low": 0.1234895071109257,
+          "cluster_balanced_estimate": 0.12761495834888173,
+          "clusters": 505,
+          "micro_estimate": 0.12761495834888173,
+          "rows": 1010
+        },
+        "exact_restoration": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.005940594059405941,
+          "ci95_low": 0.0,
+          "cluster_balanced_estimate": 0.0019801980198019802,
+          "clusters": 505,
+          "micro_estimate": 0.0019801980198019802,
+          "rows": 1010
+        },
+        "raw_cer": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.5254688812239581,
+          "ci95_low": 0.5153571332911339,
+          "cluster_balanced_estimate": 0.5206170179823808,
+          "clusters": 505,
+          "micro_estimate": 0.5206170179823808,
+          "rows": 1010
+        },
+        "residual_cer": {
+          "bootstrap_samples": 2000,
+          "ci95_high": 0.39907325088270573,
+          "ci95_low": 0.3870709777720878,
+          "cluster_balanced_estimate": 0.39300205963349905,
+          "clusters": 505,
+          "micro_estimate": 0.39300205963349905,
+          "rows": 1010
+        }
+      },
+      "slot_accuracy_changed_only": {
+        "cho": 1.0,
+        "jong": 0.5938426177947136,
+        "jung": 0.3515998306417468,
+        "n": 16533,
+        "syllable_exact": 0.24956148309441722
+      },
+      "topk_slot_recovery": {
+        "top1": 0.24956148309441722,
+        "top2": 0.4380330248593722,
+        "top3": 0.5810802637149942
+      }
+    }
+  },
+  "diagnostics": {
+    "distinct_syllables_per_initial": {
+      "ㄱ": 93,
+      "ㄲ": 36,
+      "ㄴ": 73,
+      "ㄷ": 74,
+      "ㄸ": 24,
+      "ㄹ": 82,
+      "ㅁ": 67,
+      "ㅂ": 68,
+      "ㅃ": 14,
+      "ㅅ": 87,
+      "ㅆ": 21,
+      "ㅇ": 125,
+      "ㅈ": 64,
+      "ㅉ": 16,
+      "ㅊ": 53,
+      "ㅋ": 57,
+      "ㅌ": 49,
+      "ㅍ": 51,
+      "ㅎ": 79
+    },
+    "theoretical_max_slot_accuracy": {
+      "note": "중성 21종·종성 28종 중 하나를 문맥만으로 고르는 문제. 초성체는 음절당 정보가 초성 하나뿐이라 상한이 낮다."
+    }
+  },
+  "run_id": "e4-20260823"
+}
