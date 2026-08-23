@@ -99,9 +99,13 @@ class SlotRestorer:
             for slot, model in self.heads.items()
         }
 
-    def restore_many(self, texts: Sequence[str]) -> list[tuple[str, list[float]]]:
+    def restore_many(
+        self, texts: Sequence[str], threshold: float = 0.0
+    ) -> list[tuple[str, list[float]]]:
         """여러 문장을 한 번에 복원. 문장마다 따로 predict하면 sklearn 호출 오버헤드가
-        지배해서 E1처럼 수만 건을 도는 실험이 몇 배로 느려진다."""
+        지배해서 E1처럼 수만 건을 도는 실험이 몇 배로 느려진다.
+
+        threshold 이상 확신하는 자리만 바꾼다(0.0이면 argmax 그대로)."""
         from .. import pairs as _pairs
         from ..jamo import join
 
@@ -125,6 +129,8 @@ class SlotRestorer:
                 if idx < len(model.classes_) and model.classes_[idx] == target:
                     conf *= float(probs[slot][row, idx])
             confidences[ex.sentence_index].append(conf)
+            if conf < threshold:
+                continue      # abstention
             cho, jung, jong = (int(v) for v in predicted[row])
             if min(cho, jung, jong) < 0:
                 continue

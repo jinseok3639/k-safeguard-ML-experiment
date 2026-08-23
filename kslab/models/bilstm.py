@@ -195,7 +195,10 @@ class BiLstmSlotRestorer:
                     chunks[slot].append(torch.softmax(value, dim=-1).numpy())
         return {slot: np.concatenate(parts, axis=0) for slot, parts in chunks.items()}
 
-    def restore_many(self, texts: Sequence[str]) -> list[tuple[str, list[float]]]:
+    def restore_many(
+        self, texts: Sequence[str], threshold: float = 0.0
+    ) -> list[tuple[str, list[float]]]:
+        """threshold 이상 확신하는 자리만 바꾼다. 0.0이면 argmax 그대로."""
         if self.net is None:
             raise RuntimeError("먼저 fit을 호출하세요.")
         proba = self._forward(texts)
@@ -213,13 +216,15 @@ class BiLstmSlotRestorer:
                     slots[slot] = best
                     conf *= float(probs[best])
                 confidences[r].append(conf)
+                if conf < threshold:
+                    continue      # abstention
                 if min(slots) < 0:
                     continue      # 예측이 불완전한 자리는 원문 그대로 둔다
                 results[r][c] = join(*slots)
         return [("".join(chars), conf) for chars, conf in zip(results, confidences)]
 
-    def restore(self, text: str) -> tuple[str, list[float]]:
-        return self.restore_many([text])[0]
+    def restore(self, text: str, threshold: float = 0.0) -> tuple[str, list[float]]:
+        return self.restore_many([text], threshold)[0]
 
     def predict_slots(self, examples: Sequence[F.SlotExample]) -> np.ndarray:
         """슬롯 예제 인터페이스. 문장을 다시 모아 한 번에 통과시킨다."""

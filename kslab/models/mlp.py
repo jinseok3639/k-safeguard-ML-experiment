@@ -189,7 +189,14 @@ class MlpSlotRestorer:
                     )
         return result
 
-    def restore_many(self, texts: Sequence[str]) -> list[tuple[str, list[float]]]:
+    def restore_many(
+        self, texts: Sequence[str], threshold: float = 0.0
+    ) -> list[tuple[str, list[float]]]:
+        """threshold 이상 확신하는 자리만 바꾼다.
+
+        E3에서 확인했듯 ΔFPR이 구속 조건인 상황에서는 "모르면 손대지 않는" 편이
+        항상 낫다. threshold=0.0 이면 종전대로 argmax를 그대로 적용한다.
+        """
         from .. import pairs as _pairs
 
         pairs = [_pairs.Pair("_", "_", self.technique, 1.0, t, t) for t in texts]
@@ -209,14 +216,16 @@ class MlpSlotRestorer:
             for slot, probs in proba.items():
                 conf *= float(probs[row, predicted[row, slot]])
             confidences[ex.sentence_index].append(conf)
+            if conf < threshold:
+                continue      # abstention — 이 자리는 원문 그대로 둔다
             cho, jung, jong = (int(v) for v in predicted[row])
             if min(cho, jung, jong) < 0:
                 continue
             results[ex.sentence_index][ex.char_index] = join(cho, jung, jong)
         return [("".join(chars), conf) for chars, conf in zip(results, confidences)]
 
-    def restore(self, text: str) -> tuple[str, list[float]]:
-        return self.restore_many([text])[0]
+    def restore(self, text: str, threshold: float = 0.0) -> tuple[str, list[float]]:
+        return self.restore_many([text], threshold)[0]
 
     def parameter_count(self) -> int:
         if self.net is None:
