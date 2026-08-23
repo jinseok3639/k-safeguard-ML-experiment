@@ -62,5 +62,7 @@ GPU 없음(Intel UHD) · 12코어 · RAM 15.7GB · C: 여유 21GB. torch는 CPU 
 
 ## 진행 상황
 
-실험별 수치와 판정은 [`EXPERIMENTS.md`](./EXPERIMENTS.md)를, 상세 보고서는
-[`reports/`](./reports/)를 본다.
+**먼저 [`reports/SUMMARY.md`](./reports/SUMMARY.md)를 읽는다** — E0~E7 전체를 묶은
+종합 판정과 저장소에 돌려줄 산출물이 거기 있다.
+
+실험별 수치는 [`EXPERIMENTS.md`](./EXPERIMENTS.md), 개별 상세는 [`reports/`](./reports/).
