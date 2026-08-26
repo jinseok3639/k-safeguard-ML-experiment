@@ -11,8 +11,9 @@ k-safeguard의 "규칙으로 답이 안 나오는 난독화 케이스에 ML을 �
   러너는 시작할 때 이걸 확인하고 어긋나면 즉시 멈춘다.
 - **k-safeguard 저장소는 읽기 전용.** 브랜치·커밋·PR 없음.
 - **505개 dev 시드는 평가 전용.** 학습에 넣지 않는다(E0만 예외 — 아래 참고).
-- **가드레일 추론은 여기서 하지 않는다.** NRR·ΔFPR은 GPU와 하네스가 있는 환경의 몫이고,
-  여기서는 proxy 지표로만 판단한다.
+- **가드레일 추론은 이 로컬 환경에서 하지 않는다.** GPU가 없어 E0~E9b는 proxy 지표로만
+  판단한다. 실제 NRR·ΔFPR이 필요하면 `notebooks/colab_kanana_guardrail_eval.ipynb`로
+  Colab에서 돌리고 결과 zip을 다시 `results/`에 반영한다(E10 선례).
 - **후보만 만들고 판단하지 않는다.** block/allow를 반환하는 코드는 이 폴더에 두지 않는다.
 
 ## 시작하기
@@ -65,7 +66,7 @@ GPU 없음(Intel UHD) · 12코어 · RAM 15.7GB · C: 여유 21GB. torch는 CPU 
 
 ## 진행 상황
 
-**먼저 [`reports/SUMMARY.md`](./reports/SUMMARY.md)를 읽는다** — E0~E7 전체를 묶은
+**먼저 [`reports/SUMMARY.md`](./reports/SUMMARY.md)를 읽는다** — E0~E10 전체를 묶은
 종합 판정과 저장소에 돌려줄 산출물이 거기 있다.
 
 실험별 수치는 [`EXPERIMENTS.md`](./EXPERIMENTS.md), 개별 상세는 [`reports/`](./reports/).
