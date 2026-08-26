@@ -39,11 +39,14 @@ GPU 없음(Intel UHD) · 12코어 · RAM 15.7GB · C: 여유 21GB. torch는 CPU 
 | 경로 | 내용 |
 |---|---|
 | `kslab/jamo.py` | 자모 분해·조합. 테이블은 저장소 `normalization.py:18-34`와 동일(테스트로 대조) |
-| `kslab/obfuscate.py` | 난독화 생성기 8종. 저장소 main의 5종 + liaison·palatalize(겹받침 보강) + jongseong_cram(신규) |
+| `kslab/phonology.py` | 표준발음법 규칙 테이블(격음화·비음화·유음화·평파열음화·자음군 단순화·경음화) + 모음 혼동 |
+| `kslab/obfuscate.py` | 난독화 생성기 17종. 저장소 main의 5종 + liaison·palatalize·jongseong_cram + E9의 음운 규칙 9종 |
+| `kslab/compose.py` | 다중(조합) 난독화 — 프로파일, 단계별 시드, 손상량 보정, 자리별 출처 추적 |
 | `kslab/pairs.py` | (난독화, 원문) 페어 구성, source-disjoint 분할, 누출 검사 |
-| `kslab/features.py` | 후보 위치 규칙과 슬롯 특징 인코딩 |
+| `kslab/features.py` | 후보 위치 규칙과 슬롯 특징 인코딩. 조합 기법은 구성 기법의 합집합으로 해석 |
+| `kslab/ceiling.py` | 학습 없이 구하는 구조적 복원 상한(도달불가/표현불가 분해) |
 | `kslab/models/` | linear(로지스틱) → mlp → bilstm 사다리 |
-| `kslab/metrics.py` | proxy 지표 + seed-cluster bootstrap (저장소 구현 이식) |
+| `kslab/metrics.py` | proxy 지표 + seed-cluster bootstrap (저장소 구현 이식) + 자리 단위 4분류 |
 | `kslab/record.py` | run manifest, 경로 격리 검사, baseline 발행 |
 | `exp/run_e*.py` | 실험 러너 |
 | `baselines/`, `reports/` | 커밋 대상 — 집계 JSON과 보고서 |

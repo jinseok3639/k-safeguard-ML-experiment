@@ -27,6 +27,7 @@ from kslab.models.decision import (
     detensify,
     tense_positions,
 )
+from kslab.models.bilstm import BiLstmSlotRestorer
 from kslab.models.linear import SlotRestorer
 
 TRAIN_TEXTS = [
@@ -250,6 +251,100 @@ class TestCorpusSplit(unittest.TestCase):
         got = list(C._sentences(block))
         self.assertTrue(any("정상 문장" in s for s in got))
         self.assertFalse(any(s.startswith("|") or s.startswith("==") for s in got))
+
+
+class TestBilstmCheckpoint(unittest.TestCase):
+    """BiLSTM 체크포인트/재개. 노트북처럼 학습 도중 죽는 환경을 흉내 낸다.
+
+    재개가 정말 값어치가 있으려면 "이어서 학습해도 결과가 비슷하다" 정도가 아니라
+    무중단 실행과 **비트 단위로 동일**해야 한다 — 안 그러면 재개할 때마다 학습이 조금씩
+    갈라져 어느 실행이 진짜인지 알 수 없어진다.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import torch
+
+        cls.torch = torch
+        items = P.seeds_as_items(P.load_seeds())[:60]
+        cls.pairs = P.make_pairs(items, ["liaison"], (0.5, 1.0), gen_seed=1, include_identity=True)
+
+    def _make(self):
+        return BiLstmSlotRestorer(
+            "liaison", max_len=48, embed_dim=16, hidden=8, layers=1,
+            epochs=2, batch_size=8, random_state=42, threads=1,
+        )
+
+    def _state_equal(self, a, b) -> bool:
+        sa, sb = a.net.state_dict(), b.net.state_dict()
+        return set(sa) == set(sb) and all(self.torch.equal(sa[k], sb[k]) for k in sa)
+
+    def test_completed_checkpoint_matches_uninterrupted_run(self):
+        import tempfile
+
+        baseline = self._make()
+        baseline.fit(self.pairs, show_progress=False)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ckpt = Path(tmp) / "ckpt.pt"
+            checkpointed = self._make()
+            checkpointed.fit(self.pairs, checkpoint_path=ckpt, checkpoint_every=2, show_progress=False)
+            self.assertTrue(self._state_equal(baseline, checkpointed))
+
+            # 이미 완주된 체크포인트가 있으면 fit()이 재학습 없이 즉시 그 상태를 되돌려야 한다.
+            resumed = self._make()
+            resumed.fit(self.pairs, checkpoint_path=ckpt, checkpoint_every=2, show_progress=False)
+            self.assertTrue(self._state_equal(baseline, resumed))
+
+    def test_mid_epoch_crash_resumes_to_identical_weights(self):
+        import tempfile
+
+        torch = self.torch
+        baseline = self._make()
+        baseline.fit(self.pairs, show_progress=False)
+
+        real_clip = torch.nn.utils.clip_grad_norm_
+        with tempfile.TemporaryDirectory() as tmp:
+            ckpt = Path(tmp) / "ckpt.pt"
+            calls = {"n": 0}
+
+            def fake_clip(*a, **kw):
+                calls["n"] += 1
+                if calls["n"] == 7:   # epoch 0 중간
+                    raise RuntimeError("시뮬레이션된 크래시")
+                return real_clip(*a, **kw)
+
+            torch.nn.utils.clip_grad_norm_ = fake_clip
+            crashing = self._make()
+            try:
+                with self.assertRaises(RuntimeError):
+                    crashing.fit(self.pairs, checkpoint_path=ckpt, checkpoint_every=1, show_progress=False)
+            finally:
+                torch.nn.utils.clip_grad_norm_ = real_clip
+
+            self.assertTrue(ckpt.exists())
+            resumed = self._make()
+            resumed.fit(self.pairs, checkpoint_path=ckpt, checkpoint_every=1, show_progress=False)
+            self.assertTrue(
+                self._state_equal(baseline, resumed),
+                "재개한 가중치가 무중단 실행과 다릅니다 — RNG 상태 복원이 깨졌을 수 있습니다",
+            )
+
+    def test_mismatched_signature_is_ignored_not_crashed(self):
+        """다른 technique의 체크포인트를 잘못 물려도 조용히 무시하고 새로 시작해야 한다."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ckpt = Path(tmp) / "ckpt.pt"
+            other = BiLstmSlotRestorer(
+                "jongseong_cram", max_len=48, embed_dim=16, hidden=8, layers=1,
+                epochs=1, batch_size=8, random_state=42, threads=1,
+            )
+            other.fit(self.pairs, checkpoint_path=ckpt, checkpoint_every=1, show_progress=False)
+
+            model = self._make()
+            model.fit(self.pairs, checkpoint_path=ckpt, checkpoint_every=1, show_progress=False)
+            self.assertEqual(len(model._fit_log), 2)   # technique이 다른 체크포인트는 안 쓰고 2 epoch을 다 돎
 
 
 if __name__ == "__main__":

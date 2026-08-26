@@ -45,10 +45,22 @@ class Pair:
     intensity: float
     obfuscated: str
     clean: str
+    # 조합 난독화에서만 채워진다. 문자마다 마지막으로 그 자리를 바꾼 단계 이름("" = 무변경).
+    # 단일 난독화 페어는 비워 둔다 — technique 하나가 곧 출처이므로 정보가 중복이다.
+    provenance: tuple[str, ...] = ()
+    # 이 페어를 만든 프로파일 이름(조합일 때만). 보고서에서 조건을 식별하는 데 쓴다.
+    profile: str = ""
 
     @property
     def is_identity(self) -> bool:
         return self.obfuscated == self.clean
+
+    @property
+    def depth(self) -> int:
+        """겹쳐 건 변환의 수. 단일 난독화는 1, identity는 0."""
+        if self.is_identity:
+            return 0
+        return len(self.technique.split("+"))
 
 
 def load_seeds(seed_dir: Path | None = None) -> list[Seed]:
@@ -133,6 +145,48 @@ def make_pairs(
                         f"{technique}이 길이를 바꿨습니다 (len {len(text)} -> {len(obf)}): {text!r}"
                     )
                 pairs.append(Pair(cluster_id, source, technique, intensity, obf, text))
+    return pairs
+
+
+def make_composed_pairs(
+    items: Sequence[tuple[str, str, str]],
+    profile,
+    intensity: float = 1.0,
+    gen_seed: int = 1234,
+    include_identity: bool = True,
+) -> list[Pair]:
+    """조합(다중) 난독화 페어. `compose.Profile` 하나를 모든 아이템에 건다.
+
+    `make_pairs`를 건드리지 않고 형제 함수로 둔 이유: `make_pairs`는 technique 이름을
+    `obfuscate.TRANSFORMS`에 대조해 검증하는데 조합 이름은 거기 없다. 그 검증을 느슨하게
+    하면 E0~E8의 모든 기준선이 같은 함수를 통과하는 의미가 사라진다.
+
+    페어의 `technique`은 구성 기법의 **합집합 이름**(`liaison+tensify`)이다. 추론 시점에
+    어느 단계가 어느 자리를 건드렸는지 알 수 없으므로, 모델이 다뤄야 할 슬롯과 후보 위치는
+    합집합이어야 정직하다. 단계별 귀속은 `provenance`에 따로 남긴다.
+    """
+    from . import compose as _compose
+
+    _compose.validate_stages(profile.stages)
+    technique = profile.technique()
+    pairs: list[Pair] = []
+    for cluster_id, source, text in items:
+        if include_identity:
+            # identity 페어는 조합 이름을 그대로 달아야 후보 위치 규칙이 추론 때와 같아진다.
+            # 프로파일마다 하나씩만 낸다 — 프로파일 수만큼 곱해지면 "아무것도 건드리지 마라"
+            # 신호가 과대표집되어 유용성이 무너진다.
+            pairs.append(
+                Pair(cluster_id, source, technique, 0.0, text, text, (), profile.name)
+            )
+        result = _compose.apply_stages(text, profile.stages, intensity, gen_seed)
+        if len(result.text) != len(text):
+            raise ValueError(f"{profile.name}이 길이를 바꿨습니다: {text!r}")
+        pairs.append(
+            Pair(
+                cluster_id, source, technique, intensity,
+                result.text, text, result.provenance, profile.name,
+            )
+        )
     return pairs
 
 

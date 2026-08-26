@@ -12,10 +12,13 @@ CPU 예산에 맞춰 크게 줄였다(embed 96 / hidden 128 / 2층, 시퀀스 �
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Sequence
 
 import numpy as np
+from tqdm.auto import tqdm
 
 from .. import features as F
 from ..jamo import CHO_INDEX, N_CHO, N_JONG, N_JUNG, is_syllable, join, split
@@ -133,8 +136,34 @@ class BiLstmSlotRestorer:
                     out[slot][r, c] = slots[slot]
         return out
 
-    def fit(self, pairs) -> "BiLstmSlotRestorer":
-        """선형·MLP와 달리 슬롯 예제가 아니라 **페어**를 받는다 (문장 단위 모델이라서)."""
+    def _checkpoint_signature(self, n_pairs: int) -> tuple:
+        """체크포인트가 지금 이 설정·데이터에서 나온 게 맞는지 확인하는 지문.
+
+        다른 technique이나 다른 페어 세트로 만든 체크포인트를 잘못 이어받으면 텐서 크기가
+        안 맞거나(즉시 에러) 조용히 틀린 상태에서 이어 학습하는(더 위험한) 경우가 생긴다.
+        vocab 크기까지 포함해 페어 내용이 달라졌는지도 간접적으로 잡는다.
+        """
+        return (
+            self.technique, self.max_len, self.embed_dim, self.hidden, self.layers,
+            round(self.dropout, 6), self.batch_size, self.epochs, tuple(self.unknown_slots),
+            n_pairs, len(self.vocab),
+        )
+
+    def fit(
+        self,
+        pairs,
+        checkpoint_path: str | Path | None = None,
+        checkpoint_every: int = 200,
+        show_progress: bool = True,
+    ) -> "BiLstmSlotRestorer":
+        """선형·MLP와 달리 슬롯 예제가 아니라 **페어**를 받는다 (문장 단위 모델이라서).
+
+        `checkpoint_path`를 주면 `checkpoint_every` 배치마다(그리고 매 에폭 경계마다)
+        모델·옵티마이저 상태를 저장하고, 그 경로에 파일이 이미 있으면 거기서부터 이어
+        학습한다. 노트북처럼 중간에 죽을 수 있는 환경에서 몇 시간짜리 학습을 처음부터
+        다시 하지 않기 위한 것 — 저장은 임시 파일에 쓴 뒤 원자적으로 교체해 저장 도중
+        죽어도 이전 체크포인트가 깨지지 않는다.
+        """
         torch = _torch()
         if self.threads:
             torch.set_num_threads(self.threads)
@@ -159,12 +188,79 @@ class BiLstmSlotRestorer:
         loss_fn = torch.nn.CrossEntropyLoss(ignore_index=IGNORE)
         generator = torch.Generator().manual_seed(self.random_state)
         n = len(obfuscated)
+        signature = self._checkpoint_signature(n)
+
+        start_epoch, resume_batch, order = 0, 0, None
+        ckpt_path = Path(checkpoint_path) if checkpoint_path else None
+        if ckpt_path and ckpt_path.exists():
+            checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+            if checkpoint.get("signature") != signature:
+                print(
+                    f"[bilstm:{self.technique}] 체크포인트가 현재 설정·데이터와 달라 무시합니다: "
+                    f"{ckpt_path}",
+                    flush=True,
+                )
+            else:
+                self.net.load_state_dict(checkpoint["model_state"])
+                optimizer.load_state_dict(checkpoint["optimizer_state"])
+                self._fit_log = checkpoint["fit_log"]
+                start_epoch = checkpoint["epoch"]
+                resume_batch = checkpoint["batch"]
+                order = checkpoint["order"]
+                # 재개하는 에폭의 순열(order)은 그대로 이어 쓰고, generator 상태는
+                # "그 순열을 뽑은 직후" 시점으로 되돌린다. 그래야 재개 이후 새로 도는
+                # 에폭들의 순열이 끊기지 않고 이어진다 — 안 그러면 generator가 다시
+                # 처음부터 뽑아, 재개 후 epoch들이 원래 실행과 다른(하지만 이미 예전에
+                # 나왔던) 순열을 반복하게 된다.
+                generator.set_state(checkpoint["generator_state"])
+                # Dropout은 explicit generator가 아니라 **전역** torch RNG를 쓴다.
+                # 위의 torch.manual_seed(self.random_state) 가 이미 전역 상태를
+                # "처음부터 다시"로 되돌려놨으므로, 저장해 둔 전역 상태로 다시 덮어써야
+                # 재개 이후 배치들의 드롭아웃 마스크가 크래시 없이 이어 돈 것과 같아진다.
+                torch.set_rng_state(checkpoint["torch_rng_state"])
+                print(
+                    f"[bilstm:{self.technique}] 체크포인트에서 재개: "
+                    f"epoch {start_epoch + 1}/{self.epochs}, batch {resume_batch}",
+                    flush=True,
+                )
+
+        def save_checkpoint(epoch: int, batch: int, order_tensor) -> None:
+            if ckpt_path is None:
+                return
+            ckpt_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp = ckpt_path.with_suffix(ckpt_path.suffix + ".tmp")
+            torch.save(
+                {
+                    "signature": signature, "epoch": epoch, "batch": batch,
+                    "order": order_tensor, "generator_state": generator.get_state(),
+                    "torch_rng_state": torch.get_rng_state(),
+                    "model_state": self.net.state_dict(),
+                    "optimizer_state": optimizer.state_dict(), "fit_log": self._fit_log,
+                },
+                tmp,
+            )
+            os.replace(tmp, ckpt_path)   # 같은 파일시스템 내 rename은 원자적
 
         self.net.train()
-        for _ in range(self.epochs):
-            order = torch.randperm(n, generator=generator)
-            total, batches = 0.0, 0
-            for start in range(0, n, self.batch_size):
+        epochs_iter = range(start_epoch, self.epochs)
+        if show_progress:
+            epochs_iter = tqdm(
+                epochs_iter, desc=f"{self.technique} epoch",
+                initial=start_epoch, total=self.epochs, unit="epoch",
+            )
+        for epoch in epochs_iter:
+            if order is None:
+                order = torch.randperm(n, generator=generator)
+            starts = list(range(0, n, self.batch_size))
+            skip = resume_batch if epoch == start_epoch else 0
+            total, batches = 0.0, skip
+            batch_iter = starts[skip:]
+            if show_progress:
+                batch_iter = tqdm(
+                    batch_iter, desc="  batch", leave=False,
+                    initial=skip, total=len(starts), unit="batch",
+                )
+            for start in batch_iter:
                 idx = order[start : start + self.batch_size]
                 logits = self.net(tokens[idx])
                 loss = sum(
@@ -180,7 +276,17 @@ class BiLstmSlotRestorer:
                 optimizer.step()
                 total += float(loss)
                 batches += 1
+                if show_progress:
+                    batch_iter.set_postfix(loss=f"{float(loss):.4f}")
+                if checkpoint_every and batches % checkpoint_every == 0:
+                    save_checkpoint(epoch, batches, order)
+            # 재개한 에폭은 크래시 이전 배치의 손실을 못 들고 와서 이 평균이 그 에폭
+            # 전체가 아니라 재개 이후분만 반영한다 — 학습 자체(가중치 갱신)는 전부 반영됨.
             self._fit_log.append(round(total / max(batches, 1), 4))
+            if show_progress:
+                epochs_iter.set_postfix(avg_loss=self._fit_log[-1])
+            order, resume_batch = None, 0
+            save_checkpoint(epoch + 1, 0, None)
         self.net.eval()
         return self
 

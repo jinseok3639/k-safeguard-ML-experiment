@@ -1,0 +1,1291 @@
+{
+  "ceilings": {
+    "d1_aspirate": {
+      "depth": 1,
+      "models": {
+        "aspirate": {
+          "ceiling_cer_reduction": 0.010956540640410819,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 1613,
+          "fixable": 1613,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.010956540640410819,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        }
+      },
+      "realized_damage": 0.013578183024718929,
+      "stage_intensity": 1.0,
+      "stages": [
+        "aspirate"
+      ],
+      "union_technique": "aspirate"
+    },
+    "d1_cram": {
+      "depth": 1,
+      "models": {
+        "jongseong_cram": {
+          "ceiling_cer_reduction": 0.07861131111684712,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11573,
+          "fixable": 11573,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07861131111684712,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        }
+      },
+      "realized_damage": 0.08058855808374063,
+      "stage_intensity": 0.1172,
+      "stages": [
+        "jongseong_cram"
+      ],
+      "union_technique": "jongseong_cram"
+    },
+    "d1_liaison": {
+      "depth": 1,
+      "models": {
+        "liaison": {
+          "ceiling_cer_reduction": 0.07307530329171705,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 10758,
+          "fixable": 10758,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07307530329171705,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        }
+      },
+      "realized_damage": 0.07484590548869974,
+      "stage_intensity": 0.75,
+      "stages": [
+        "liaison"
+      ],
+      "union_technique": "liaison"
+    },
+    "d1_tensify": {
+      "depth": 1,
+      "models": {
+        "tensify": {
+          "ceiling_cer_reduction": 0.0773207080655898,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11383,
+          "fixable": 11383,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.0773207080655898,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        }
+      },
+      "realized_damage": 0.07892956955628437,
+      "stage_intensity": 0.2812,
+      "stages": [
+        "tensify"
+      ],
+      "union_technique": "tensify"
+    },
+    "d1_vowel": {
+      "depth": 1,
+      "models": {
+        "vowel_confuse": {
+          "ceiling_cer_reduction": 0.08081892159926096,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11898,
+          "fixable": 11898,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.08081892159926096,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        }
+      },
+      "realized_damage": 0.0810096859407103,
+      "stage_intensity": 0.4219,
+      "stages": [
+        "vowel_confuse"
+      ],
+      "union_technique": "vowel_confuse"
+    },
+    "d2_aspirate_then_liaison": {
+      "depth": 2,
+      "models": {
+        "aspirate": {
+          "ceiling_cer_reduction": 0.013422271733076118,
+          "ceiling_exact_restoration": 0.16133333333333333,
+          "ceiling_net_repair": 0.17069799585349,
+          "ceiling_residual_cer": 0.0652094173266856,
+          "damaged_sites": 11576,
+          "fixable": 1976,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07863168905976171,
+          "sentences": 3000,
+          "unreachable": 9600,
+          "unreachable_share": 0.82930200414651
+        },
+        "aspirate+liaison": {
+          "ceiling_cer_reduction": 0.07863168905976171,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11576,
+          "fixable": 11576,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07863168905976171,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison": {
+          "ceiling_cer_reduction": 0.07863168905976171,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11576,
+          "fixable": 11576,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07863168905976171,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        }
+      },
+      "realized_damage": 0.08159671265042559,
+      "stage_intensity": 0.6562,
+      "stages": [
+        "aspirate",
+        "liaison"
+      ],
+      "union_technique": "aspirate+liaison"
+    },
+    "d2_cram_then_liaison": {
+      "depth": 2,
+      "models": {
+        "jongseong_cram": {
+          "ceiling_cer_reduction": 0.07537801084106563,
+          "ceiling_exact_restoration": 0.8013333333333333,
+          "ceiling_net_repair": 0.9489481785531042,
+          "ceiling_residual_cer": 0.0040552106400032605,
+          "damaged_sites": 11694,
+          "fixable": 11097,
+          "inexpressible": 597,
+          "inexpressible_share": 0.051051821446895844,
+          "raw_cer": 0.07943322148106889,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "jongseong_cram+liaison": {
+          "ceiling_cer_reduction": 0.07943322148106889,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11694,
+          "fixable": 11694,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07943322148106889,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison": {
+          "ceiling_cer_reduction": 0.07943322148106889,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11694,
+          "fixable": 11694,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07943322148106889,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        }
+      },
+      "realized_damage": 0.08085654853817588,
+      "stage_intensity": 0.1094,
+      "stages": [
+        "jongseong_cram",
+        "liaison"
+      ],
+      "union_technique": "jongseong_cram+liaison"
+    },
+    "d2_liaison_then_cram": {
+      "depth": 2,
+      "models": {
+        "jongseong_cram": {
+          "ceiling_cer_reduction": 0.07585349617573937,
+          "ceiling_exact_restoration": 0.861,
+          "ceiling_net_repair": 0.9639188605955977,
+          "ceiling_residual_cer": 0.002839326712766102,
+          "damaged_sites": 11585,
+          "fixable": 11167,
+          "inexpressible": 418,
+          "inexpressible_share": 0.036081139404402246,
+          "raw_cer": 0.07869282288850549,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "jongseong_cram+liaison": {
+          "ceiling_cer_reduction": 0.07869282288850549,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11585,
+          "fixable": 11585,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07869282288850549,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison": {
+          "ceiling_cer_reduction": 0.07869282288850549,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11585,
+          "fixable": 11585,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07869282288850549,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        }
+      },
+      "realized_damage": 0.0810479702913439,
+      "stage_intensity": 0.1094,
+      "stages": [
+        "liaison",
+        "jongseong_cram"
+      ],
+      "union_technique": "jongseong_cram+liaison"
+    },
+    "d2_liaison_then_tensify": {
+      "depth": 2,
+      "models": {
+        "liaison": {
+          "ceiling_cer_reduction": 0.0795894523767474,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11717,
+          "fixable": 11717,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.0795894523767474,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison+tensify": {
+          "ceiling_cer_reduction": 0.0795894523767474,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11717,
+          "fixable": 11717,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.0795894523767474,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "tensify": {
+          "ceiling_cer_reduction": 0.061222133163064296,
+          "ceiling_exact_restoration": 0.566,
+          "ceiling_net_repair": 0.7692242041478194,
+          "ceiling_residual_cer": 0.01836731921368311,
+          "damaged_sites": 11717,
+          "fixable": 9013,
+          "inexpressible": 181,
+          "inexpressible_share": 0.015447640180933687,
+          "raw_cer": 0.0795894523767474,
+          "sentences": 3000,
+          "unreachable": 2523,
+          "unreachable_share": 0.2153281556712469
+        }
+      },
+      "realized_damage": 0.08158395120021439,
+      "stage_intensity": 0.2188,
+      "stages": [
+        "liaison",
+        "tensify"
+      ],
+      "union_technique": "liaison+tensify"
+    },
+    "d2_liaison_then_vowel": {
+      "depth": 2,
+      "models": {
+        "liaison": {
+          "ceiling_cer_reduction": 0.025628659538915077,
+          "ceiling_exact_restoration": 0.019666666666666666,
+          "ceiling_net_repair": 0.3331861533027199,
+          "ceiling_residual_cer": 0.05129128231602114,
+          "damaged_sites": 11324,
+          "fixable": 3773,
+          "inexpressible": 7551,
+          "inexpressible_share": 0.6668138466972802,
+          "raw_cer": 0.07691994185493621,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison+vowel_confuse": {
+          "ceiling_cer_reduction": 0.07691994185493621,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11324,
+          "fixable": 11324,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07691994185493621,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "vowel_confuse": {
+          "ceiling_cer_reduction": 0.04783382466817916,
+          "ceiling_exact_restoration": 0.38033333333333336,
+          "ceiling_net_repair": 0.6218650653479336,
+          "ceiling_residual_cer": 0.029086117186757056,
+          "damaged_sites": 11324,
+          "fixable": 7042,
+          "inexpressible": 1518,
+          "inexpressible_share": 0.13405157188272696,
+          "raw_cer": 0.07691994185493621,
+          "sentences": 3000,
+          "unreachable": 2764,
+          "unreachable_share": 0.24408336276933945
+        }
+      },
+      "realized_damage": 0.07935069741325404,
+      "stage_intensity": 0.2656,
+      "stages": [
+        "liaison",
+        "vowel_confuse"
+      ],
+      "union_technique": "liaison+vowel_confuse"
+    },
+    "d2_tensify_cram": {
+      "depth": 2,
+      "models": {
+        "jongseong_cram": {
+          "ceiling_cer_reduction": 0.05423929139099838,
+          "ceiling_exact_restoration": 0.151,
+          "ceiling_net_repair": 0.7066371681415929,
+          "ceiling_residual_cer": 0.02251762692062112,
+          "damaged_sites": 11300,
+          "fixable": 7985,
+          "inexpressible": 3315,
+          "inexpressible_share": 0.29336283185840706,
+          "raw_cer": 0.0767569183116195,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "jongseong_cram+tensify": {
+          "ceiling_cer_reduction": 0.0767569183116195,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11300,
+          "fixable": 11300,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.0767569183116195,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "tensify": {
+          "ceiling_cer_reduction": 0.021994593052479996,
+          "ceiling_exact_restoration": 0.003,
+          "ceiling_net_repair": 0.2865486725663717,
+          "ceiling_residual_cer": 0.05476232525913951,
+          "damaged_sites": 11300,
+          "fixable": 3238,
+          "inexpressible": 167,
+          "inexpressible_share": 0.014778761061946902,
+          "raw_cer": 0.0767569183116195,
+          "sentences": 3000,
+          "unreachable": 7895,
+          "unreachable_share": 0.6986725663716814
+        }
+      },
+      "realized_damage": 0.07831701994614668,
+      "stage_intensity": 0.082,
+      "stages": [
+        "tensify",
+        "jongseong_cram"
+      ],
+      "union_technique": "jongseong_cram+tensify"
+    },
+    "d2_tensify_then_liaison": {
+      "depth": 2,
+      "models": {
+        "liaison": {
+          "ceiling_cer_reduction": 0.07643766387262427,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11253,
+          "fixable": 11253,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07643766387262427,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison+tensify": {
+          "ceiling_cer_reduction": 0.07643766387262427,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11253,
+          "fixable": 11253,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07643766387262427,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "tensify": {
+          "ceiling_cer_reduction": 0.05797524759200641,
+          "ceiling_exact_restoration": 0.566,
+          "ceiling_net_repair": 0.7584644094908024,
+          "ceiling_residual_cer": 0.018462416280617858,
+          "damaged_sites": 11253,
+          "fixable": 8535,
+          "inexpressible": 99,
+          "inexpressible_share": 0.008797653958944282,
+          "raw_cer": 0.07643766387262427,
+          "sentences": 3000,
+          "unreachable": 2619,
+          "unreachable_share": 0.23273793655025327
+        }
+      },
+      "realized_damage": 0.0790061382575516,
+      "stage_intensity": 0.2109,
+      "stages": [
+        "tensify",
+        "liaison"
+      ],
+      "union_technique": "liaison+tensify"
+    },
+    "d3_canonical": {
+      "depth": 3,
+      "models": {
+        "jongseong_cram": {
+          "ceiling_cer_reduction": 0.05282642068225353,
+          "ceiling_exact_restoration": 0.151,
+          "ceiling_net_repair": 0.6923967236467237,
+          "ceiling_residual_cer": 0.023468597589968616,
+          "damaged_sites": 11232,
+          "fixable": 7777,
+          "inexpressible": 3455,
+          "inexpressible_share": 0.30760327635327633,
+          "raw_cer": 0.07629501827222214,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "jongseong_cram+liaison+tensify": {
+          "ceiling_cer_reduction": 0.07629501827222214,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11232,
+          "fixable": 11232,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07629501827222214,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison": {
+          "ceiling_cer_reduction": 0.07629501827222214,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11232,
+          "fixable": 11232,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07629501827222214,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "tensify": {
+          "ceiling_cer_reduction": 0.019800567865342553,
+          "ceiling_exact_restoration": 0.003,
+          "ceiling_net_repair": 0.25952635327635326,
+          "ceiling_residual_cer": 0.056494450406879594,
+          "damaged_sites": 11232,
+          "fixable": 2915,
+          "inexpressible": 484,
+          "inexpressible_share": 0.04309116809116809,
+          "raw_cer": 0.07629501827222214,
+          "sentences": 3000,
+          "unreachable": 7833,
+          "unreachable_share": 0.6973824786324786
+        }
+      },
+      "realized_damage": 0.07914651420987481,
+      "stage_intensity": 0.082,
+      "stages": [
+        "tensify",
+        "liaison",
+        "jongseong_cram"
+      ],
+      "union_technique": "jongseong_cram+liaison+tensify"
+    },
+    "d3_reversed": {
+      "depth": 3,
+      "models": {
+        "jongseong_cram": {
+          "ceiling_cer_reduction": 0.05398117078074692,
+          "ceiling_exact_restoration": 0.151,
+          "ceiling_net_repair": 0.6943036868775118,
+          "ceiling_residual_cer": 0.02376747408604926,
+          "damaged_sites": 11446,
+          "fixable": 7947,
+          "inexpressible": 3499,
+          "inexpressible_share": 0.3056963131224882,
+          "raw_cer": 0.07774864486679618,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "jongseong_cram+liaison+tensify": {
+          "ceiling_cer_reduction": 0.07774864486679618,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11446,
+          "fixable": 11446,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07774864486679618,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison": {
+          "ceiling_cer_reduction": 0.07774864486679618,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11446,
+          "fixable": 11446,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07774864486679618,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "tensify": {
+          "ceiling_cer_reduction": 0.02109796356423807,
+          "ceiling_exact_restoration": 0.003,
+          "ceiling_net_repair": 0.27136117420933076,
+          "ceiling_residual_cer": 0.05665068130255811,
+          "damaged_sites": 11446,
+          "fixable": 3106,
+          "inexpressible": 317,
+          "inexpressible_share": 0.027695264721300017,
+          "raw_cer": 0.07774864486679618,
+          "sentences": 3000,
+          "unreachable": 8023,
+          "unreachable_share": 0.7009435610693692
+        }
+      },
+      "realized_damage": 0.07958040351705568,
+      "stage_intensity": 0.082,
+      "stages": [
+        "jongseong_cram",
+        "liaison",
+        "tensify"
+      ],
+      "union_technique": "jongseong_cram+liaison+tensify"
+    },
+    "d3_with_vowel": {
+      "depth": 3,
+      "models": {
+        "jongseong_cram": {
+          "ceiling_cer_reduction": 0.05965303155864093,
+          "ceiling_exact_restoration": 0.25533333333333336,
+          "ceiling_net_repair": 0.7559610915038306,
+          "ceiling_residual_cer": 0.01925715605428684,
+          "damaged_sites": 11617,
+          "fixable": 8782,
+          "inexpressible": 2835,
+          "inexpressible_share": 0.2440389084961694,
+          "raw_cer": 0.07891018761292777,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "jongseong_cram+liaison+vowel_confuse": {
+          "ceiling_cer_reduction": 0.07891018761292777,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11617,
+          "fixable": 11617,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07891018761292777,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison": {
+          "ceiling_cer_reduction": 0.06138515670638101,
+          "ceiling_exact_restoration": 0.25633333333333336,
+          "ceiling_net_repair": 0.7779116811569252,
+          "ceiling_residual_cer": 0.017525030906546755,
+          "damaged_sites": 11617,
+          "fixable": 9037,
+          "inexpressible": 2580,
+          "inexpressible_share": 0.2220883188430748,
+          "raw_cer": 0.07891018761292777,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "vowel_confuse": {
+          "ceiling_cer_reduction": 0.015521199853278812,
+          "ceiling_exact_restoration": 0.0,
+          "ceiling_net_repair": 0.19669449944047518,
+          "ceiling_residual_cer": 0.06338898775964896,
+          "damaged_sites": 11617,
+          "fixable": 2285,
+          "inexpressible": 2674,
+          "inexpressible_share": 0.23017990875441163,
+          "raw_cer": 0.07891018761292777,
+          "sentences": 3000,
+          "unreachable": 6658,
+          "unreachable_share": 0.5731255918051132
+        }
+      },
+      "realized_damage": 0.0810096859407103,
+      "stage_intensity": 0.0898,
+      "stages": [
+        "liaison",
+        "vowel_confuse",
+        "jongseong_cram"
+      ],
+      "union_technique": "jongseong_cram+liaison+vowel_confuse"
+    },
+    "d5_full_attack": {
+      "depth": 5,
+      "models": {
+        "aspirate": {
+          "ceiling_cer_reduction": 0.007913434498498824,
+          "ceiling_exact_restoration": 0.024333333333333332,
+          "ceiling_net_repair": 0.10102323968088796,
+          "ceiling_residual_cer": 0.07041937806518225,
+          "damaged_sites": 11532,
+          "fixable": 1165,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07833281256368108,
+          "sentences": 3000,
+          "unreachable": 10367,
+          "unreachable_share": 0.898976760319112
+        },
+        "aspirate+jongseong_cram+liaison_correct+palatalize+tensify": {
+          "ceiling_cer_reduction": 0.07833281256368108,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11532,
+          "fixable": 11532,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07833281256368108,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "jongseong_cram": {
+          "ceiling_cer_reduction": 0.05487100762135065,
+          "ceiling_exact_restoration": 0.151,
+          "ceiling_net_repair": 0.7004856052722858,
+          "ceiling_residual_cer": 0.02346180494233042,
+          "damaged_sites": 11532,
+          "fixable": 8078,
+          "inexpressible": 3454,
+          "inexpressible_share": 0.2995143947277142,
+          "raw_cer": 0.07833281256368108,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "liaison_correct": {
+          "ceiling_cer_reduction": 0.07833281256368108,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11532,
+          "fixable": 11532,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07833281256368108,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "palatalize": {
+          "ceiling_cer_reduction": 0.07833281256368108,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 11532,
+          "fixable": 11532,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.07833281256368108,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "tensify": {
+          "ceiling_cer_reduction": 0.02189270333790705,
+          "ceiling_exact_restoration": 0.003,
+          "ceiling_net_repair": 0.27948317724592436,
+          "ceiling_residual_cer": 0.05644010922577402,
+          "damaged_sites": 11532,
+          "fixable": 3223,
+          "inexpressible": 176,
+          "inexpressible_share": 0.015261879986125564,
+          "raw_cer": 0.07833281256368108,
+          "sentences": 3000,
+          "unreachable": 8133,
+          "unreachable_share": 0.7052549427679501
+        }
+      },
+      "realized_damage": 0.08007810007529256,
+      "stage_intensity": 0.082,
+      "stages": [
+        "liaison_correct",
+        "palatalize",
+        "aspirate",
+        "tensify",
+        "jongseong_cram"
+      ],
+      "union_technique": "aspirate+jongseong_cram+liaison_correct+palatalize+tensify"
+    },
+    "d5_phonological": {
+      "depth": 5,
+      "models": {
+        "cluster_reduce": {
+          "ceiling_cer_reduction": 0.02268744311157603,
+          "ceiling_exact_restoration": 0.3496666666666667,
+          "ceiling_net_repair": 0.4627320587420338,
+          "ceiling_residual_cer": 0.0263418875409257,
+          "damaged_sites": 7218,
+          "fixable": 3340,
+          "inexpressible": 3878,
+          "inexpressible_share": 0.5372679412579662,
+          "raw_cer": 0.04902933065250173,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "cluster_reduce+coda_neutralize+lateralize+nasalize+tensify_rule": {
+          "ceiling_cer_reduction": 0.04902933065250173,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 7218,
+          "fixable": 7218,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.04902933065250173,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "coda_neutralize": {
+          "ceiling_cer_reduction": 0.02268744311157603,
+          "ceiling_exact_restoration": 0.3496666666666667,
+          "ceiling_net_repair": 0.4627320587420338,
+          "ceiling_residual_cer": 0.0263418875409257,
+          "damaged_sites": 7218,
+          "fixable": 3340,
+          "inexpressible": 3878,
+          "inexpressible_share": 0.5372679412579662,
+          "raw_cer": 0.04902933065250173,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "lateralize": {
+          "ceiling_cer_reduction": 0.04902933065250173,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 7218,
+          "fixable": 7218,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.04902933065250173,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "nasalize": {
+          "ceiling_cer_reduction": 0.04902933065250173,
+          "ceiling_exact_restoration": 1.0,
+          "ceiling_net_repair": 1.0,
+          "ceiling_residual_cer": 0.0,
+          "damaged_sites": 7218,
+          "fixable": 7218,
+          "inexpressible": 0,
+          "inexpressible_share": 0.0,
+          "raw_cer": 0.04902933065250173,
+          "sentences": 3000,
+          "unreachable": 0,
+          "unreachable_share": 0.0
+        },
+        "tensify_rule": {
+          "ceiling_cer_reduction": 0.02270102840685242,
+          "ceiling_exact_restoration": 0.37133333333333335,
+          "ceiling_net_repair": 0.4630091438071488,
+          "ceiling_residual_cer": 0.026328302245649308,
+          "damaged_sites": 7218,
+          "fixable": 3342,
+          "inexpressible": 134,
+          "inexpressible_share": 0.01856469936270435,
+          "raw_cer": 0.04902933065250173,
+          "sentences": 3000,
+          "unreachable": 3742,
+          "unreachable_share": 0.5184261568301468
+        }
+      },
+      "realized_damage": 0.05541021681703909,
+      "stage_intensity": 1.0,
+      "stages": [
+        "cluster_reduce",
+        "coda_neutralize",
+        "nasalize",
+        "lateralize",
+        "tensify_rule"
+      ],
+      "union_technique": "cluster_reduce+coda_neutralize+lateralize+nasalize+tensify_rule"
+    }
+  },
+  "generators": {
+    "aspirate": {
+      "char_change_rate": 0.010956540640410819,
+      "clause": "제12항 1",
+      "family": "phonetic",
+      "modeled": true,
+      "sentence_fire_rate": 0.221,
+      "signal_density": 0.1259664193674346,
+      "sites_per_1k_chars": 10.956540640410818,
+      "slot_changes": {
+        "cho": 810,
+        "jong": 810,
+        "jung": 0
+      },
+      "unknown_slots": [
+        0,
+        2
+      ]
+    },
+    "cluster_reduce": {
+      "char_change_rate": 0.002282329606433996,
+      "clause": "제10·11항",
+      "family": "phonetic",
+      "modeled": false,
+      "sentence_fire_rate": 0.09333333333333334,
+      "signal_density": 0.0034126226411261653,
+      "sites_per_1k_chars": 2.2823296064339957,
+      "slot_changes": {
+        "cho": 0,
+        "jong": 336,
+        "jung": 0
+      },
+      "unknown_slots": [
+        2
+      ]
+    },
+    "coda_neutralize": {
+      "char_change_rate": 0.016648779361219414,
+      "clause": "제8·9항",
+      "family": "phonetic",
+      "modeled": false,
+      "sentence_fire_rate": 0.5003333333333333,
+      "signal_density": 0.024893863373214975,
+      "sites_per_1k_chars": 16.648779361219415,
+      "slot_changes": {
+        "cho": 0,
+        "jong": 2451,
+        "jung": 0
+      },
+      "unknown_slots": [
+        2
+      ]
+    },
+    "h_deletion": {
+      "char_change_rate": 0.0013449442323628905,
+      "clause": "제12항 4",
+      "family": "phonetic",
+      "modeled": false,
+      "sentence_fire_rate": 0.034,
+      "signal_density": 0.0020110097706636334,
+      "sites_per_1k_chars": 1.3449442323628904,
+      "slot_changes": {
+        "cho": 90,
+        "jong": 108,
+        "jung": 0
+      },
+      "unknown_slots": [
+        0,
+        2
+      ]
+    },
+    "lateralize": {
+      "char_change_rate": 0.0018408075099512289,
+      "clause": "제20항",
+      "family": "phonetic",
+      "modeled": false,
+      "sentence_fire_rate": 0.081,
+      "signal_density": 0.0027524426659083063,
+      "sites_per_1k_chars": 1.8408075099512289,
+      "slot_changes": {
+        "cho": 21,
+        "jong": 250,
+        "jung": 0
+      },
+      "unknown_slots": [
+        0,
+        2
+      ]
+    },
+    "liaison_correct": {
+      "char_change_rate": 0.10127837628550856,
+      "clause": "제13·14항 + 제12항 4",
+      "family": "phonetic",
+      "modeled": false,
+      "sentence_fire_rate": 0.8503333333333334,
+      "signal_density": 0.15143512969997358,
+      "sites_per_1k_chars": 101.27837628550857,
+      "slot_changes": {
+        "cho": 7525,
+        "jong": 7543,
+        "jung": 0
+      },
+      "unknown_slots": [
+        0,
+        2
+      ]
+    },
+    "nasalize": {
+      "char_change_rate": 0.007295303563422951,
+      "clause": "제18·19항",
+      "family": "phonetic",
+      "modeled": false,
+      "sentence_fire_rate": 0.24733333333333332,
+      "signal_density": 0.010908204513599707,
+      "sites_per_1k_chars": 7.295303563422951,
+      "slot_changes": {
+        "cho": 497,
+        "jong": 577,
+        "jung": 0
+      },
+      "unknown_slots": [
+        0,
+        2
+      ]
+    },
+    "tensify_rule": {
+      "char_change_rate": 0.022680650463937833,
+      "clause": "제23~28항",
+      "family": "phonetic",
+      "modeled": false,
+      "sentence_fire_rate": 0.6003333333333334,
+      "signal_density": 0.7050253378378378,
+      "sites_per_1k_chars": 22.680650463937834,
+      "slot_changes": {
+        "cho": 3339,
+        "jong": 0,
+        "jung": 0
+      },
+      "unknown_slots": [
+        0
+      ]
+    },
+    "vowel_confuse": {
+      "char_change_rate": 0.19218437962749121,
+      "clause": "표기 혼동(조항 없음)",
+      "family": "phonetic",
+      "modeled": true,
+      "sentence_fire_rate": 0.9953333333333333,
+      "signal_density": 1.0,
+      "sites_per_1k_chars": 192.1843796274912,
+      "slot_changes": {
+        "cho": 0,
+        "jong": 0,
+        "jung": 28293
+      },
+      "unknown_slots": [
+        1
+      ]
+    }
+  },
+  "liaison_variants": {
+    "differing_char_rate": 0.0013449442323628905,
+    "differing_sentence_rate": 0.034,
+    "differing_sentences": 102,
+    "samples": [
+      {
+        "clean": "문학은 원래 문예(文藝)라고 부르는 것이 옳으며, 문학을 학문의 대상으로서 탐구하는 학문의 명칭 역시 문예학이다.",
+        "liaison": "문하근 원래 무녜(文藝)라고 부르는 거시 올흐며, 문하글 학무늬 대상으로서 탐구하는 학무늬 명칭 역시 무녜하기다.",
+        "liaison_correct": "문하근 원래 무녜(文藝)라고 부르는 거시 오르며, 문하글 학무늬 대상으로서 탐구하는 학무늬 명칭 역시 무녜하기다."
+      },
+      {
+        "clean": "초월수(超越數, )는 수학에서 대수학적이지 않은 수, 즉 유리수 계수를 가지는 0이 아닌 유한 차수 다항 방정식의 해가 될 수 없는 수를 의미한다.",
+        "liaison": "초월수(超越數, )는 수하게서 대수학저기지 안흔 수, 즉 유리수 계수를 가지는 0이 아닌 유한 차수 다항 방정시긔 해가 될 수 없는 수를 의미한다.",
+        "liaison_correct": "초월수(超越數, )는 수하게서 대수학저기지 아는 수, 즉 유리수 계수를 가지는 0이 아닌 유한 차수 다항 방정시긔 해가 될 수 없는 수를 의미한다."
+      },
+      {
+        "clean": "지구과학에는 많은 전문 분야가 포괄되지만 대체로 여섯 가지로 나뉜다.",
+        "liaison": "지구과하게는 만흔 전문 부냐가 포괄되지만 대체로 여섯 가지로 나뉜다.",
+        "liaison_correct": "지구과하게는 마는 전문 부냐가 포괄되지만 대체로 여섯 가지로 나뉜다."
+      },
+      {
+        "clean": "수많은 자원봉사자들이 인터넷을 이용해 기여하여 만들어지는 프로젝트로 수많은 고전의 원문이 모여 있다.",
+        "liaison": "수만흔 자원봉사자드리 인터네슬 이용해 기여하여 만드러지는 프로젝트로 수만흔 고저늬 원무니 모여 있다.",
+        "liaison_correct": "수마는 자원봉사자드리 인터네슬 이용해 기여하여 만드러지는 프로젝트로 수마는 고저늬 원무니 모여 있다."
+      },
+      {
+        "clean": "핀란드의 이론물리학자 노르드스트룀도 일반 상대론의 많은 부분을 논문으로 발표했었다.",
+        "liaison": "핀란드의 이론물리학자 노르드스트룀도 일반 상대로늬 만흔 부부늘 논무느로 발표해썼다.",
+        "liaison_correct": "핀란드의 이론물리학자 노르드스트룀도 일반 상대로늬 마는 부부늘 논무느로 발표해썼다."
+      },
+      {
+        "clean": "1929년 노벨 문학상을 비롯, 괴테 상 등 많은 상을 받았다.",
+        "liaison": "1929년 노벨 문학상을 비롯, 괴테 상 등 만흔 상을 바닸다.",
+        "liaison_correct": "1929년 노벨 문학상을 비롯, 괴테 상 등 마는 상을 바닸다."
+      },
+      {
+        "clean": "그러나 노름이 주어지지 않은 일반적인 벡터 공간에서는 벡터의 길이 자체는 정의되지 않는다.",
+        "liaison": "그러나 노르미 주어지지 안흔 일반저긴 벡터 공가네서는 벡터의 기리 자체는 정의되지 않는다.",
+        "liaison_correct": "그러나 노르미 주어지지 아는 일반저긴 벡터 공가네서는 벡터의 기리 자체는 정의되지 않는다."
+      },
+      {
+        "clean": "아래 예들은 곱셈적이지도, 덧셈적이지도 않은 함수들이다.",
+        "liaison": "아래 예드른 곱셈저기지도, 덧셈저기지도 안흔 함수드리다.",
+        "liaison_correct": "아래 예드른 곱셈저기지도, 덧셈저기지도 아는 함수드리다."
+      }
+    ],
+    "sentences": 3000
+  },
+  "regression": {
+    "by_technique": {
+      "_composed": {
+        "cases": 5,
+        "failures": 0
+      },
+      "aspirate": {
+        "cases": 10,
+        "failures": 0
+      },
+      "cluster_reduce": {
+        "cases": 5,
+        "failures": 0
+      },
+      "coda_neutralize": {
+        "cases": 5,
+        "failures": 0
+      },
+      "h_deletion": {
+        "cases": 5,
+        "failures": 0
+      },
+      "lateralize": {
+        "cases": 5,
+        "failures": 0
+      },
+      "liaison_correct": {
+        "cases": 6,
+        "failures": 0
+      },
+      "nasalize": {
+        "cases": 8,
+        "failures": 0
+      },
+      "tensify_rule": {
+        "cases": 4,
+        "failures": 0
+      }
+    },
+    "composed_examples": [
+      {
+        "expected": "옫꼬름",
+        "got": "옫꼬름",
+        "input": "옷고름",
+        "ok": true
+      },
+      {
+        "expected": "꼳따발",
+        "got": "꼳따발",
+        "input": "꽃다발",
+        "ok": true
+      },
+      {
+        "expected": "반머리",
+        "got": "반머리",
+        "input": "밭머리",
+        "ok": true
+      },
+      {
+        "expected": "암마당",
+        "got": "암마당",
+        "input": "앞마당",
+        "ok": true
+      },
+      {
+        "expected": "잉는",
+        "got": "잉는",
+        "input": "읽는",
+        "ok": true
+      }
+    ],
+    "failures": []
+  },
+  "run_id": "e9a-20260825",
+  "single_model_structural_failures": [
+    {
+      "ceiling_cer_reduction": 0.013422271733076118,
+      "inexpressible_share": 0.0,
+      "profile": "d2_aspirate_then_liaison",
+      "technique": "aspirate",
+      "unreachable_share": 0.82930200414651
+    },
+    {
+      "ceiling_cer_reduction": 0.019800567865342553,
+      "inexpressible_share": 0.04309116809116809,
+      "profile": "d3_canonical",
+      "technique": "tensify",
+      "unreachable_share": 0.6973824786324786
+    },
+    {
+      "ceiling_cer_reduction": 0.015521199853278812,
+      "inexpressible_share": 0.23017990875441163,
+      "profile": "d3_with_vowel",
+      "technique": "vowel_confuse",
+      "unreachable_share": 0.5731255918051132
+    },
+    {
+      "ceiling_cer_reduction": 0.007913434498498824,
+      "inexpressible_share": 0.0,
+      "profile": "d5_full_attack",
+      "technique": "aspirate",
+      "unreachable_share": 0.898976760319112
+    }
+  ],
+  "status": "PROCEED_TO_E9B",
+  "union_passes_gate": [
+    {
+      "ceiling_cer_reduction": 0.0773207080655898,
+      "profile": "d1_tensify"
+    },
+    {
+      "ceiling_cer_reduction": 0.07307530329171705,
+      "profile": "d1_liaison"
+    },
+    {
+      "ceiling_cer_reduction": 0.07861131111684712,
+      "profile": "d1_cram"
+    },
+    {
+      "ceiling_cer_reduction": 0.08081892159926096,
+      "profile": "d1_vowel"
+    },
+    {
+      "ceiling_cer_reduction": 0.0795894523767474,
+      "profile": "d2_liaison_then_tensify"
+    },
+    {
+      "ceiling_cer_reduction": 0.07643766387262427,
+      "profile": "d2_tensify_then_liaison"
+    },
+    {
+      "ceiling_cer_reduction": 0.07869282288850549,
+      "profile": "d2_liaison_then_cram"
+    },
+    {
+      "ceiling_cer_reduction": 0.07943322148106889,
+      "profile": "d2_cram_then_liaison"
+    },
+    {
+      "ceiling_cer_reduction": 0.0767569183116195,
+      "profile": "d2_tensify_cram"
+    },
+    {
+      "ceiling_cer_reduction": 0.07691994185493621,
+      "profile": "d2_liaison_then_vowel"
+    },
+    {
+      "ceiling_cer_reduction": 0.07863168905976171,
+      "profile": "d2_aspirate_then_liaison"
+    },
+    {
+      "ceiling_cer_reduction": 0.07629501827222214,
+      "profile": "d3_canonical"
+    },
+    {
+      "ceiling_cer_reduction": 0.07774864486679618,
+      "profile": "d3_reversed"
+    },
+    {
+      "ceiling_cer_reduction": 0.07891018761292777,
+      "profile": "d3_with_vowel"
+    },
+    {
+      "ceiling_cer_reduction": 0.07833281256368108,
+      "profile": "d5_full_attack"
+    },
+    {
+      "ceiling_cer_reduction": 0.04902933065250173,
+      "profile": "d5_phonological"
+    }
+  ]
+}

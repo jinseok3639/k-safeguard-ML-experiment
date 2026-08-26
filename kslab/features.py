@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
 
+from . import phonology as PH
 from .jamo import (
     CHO_INDEX,
     N_CHO,
@@ -26,33 +27,140 @@ PAD = 0
 UNK = 1
 _SPECIAL = 2
 
-# 기법별로 "모르는 슬롯". 나머지 슬롯은 입력에서 그대로 복사하면 된다.
-UNKNOWN_SLOTS = {
-    "chosung": (1, 2),          # 초성은 주어짐, 중성·종성을 예측
-    "tensify": (0,),            # 초성만 (사실상 이진 되돌림 판단)
-    "liaison": (0, 2),          # 받침이 뒤로 넘어가 초성·종성이 흔들림
-    "palatalize": (0, 2),
-    "jongseong_cram": (2,),     # 종성만
-    "identity": (),
+# 조합 기법 이름은 단일 기법 이름을 이 문자로 이어 붙인다. `liaison+tensify` 처럼.
+COMPOSITE_SEP = "+"
+
+
+# --- 후보 위치 규칙 -------------------------------------------------------
+#
+# 규칙은 두 종류다.
+#  - **좁은 규칙**: 난독화 결과에 눈에 보이는 흔적이 남는 경우(초성체의 호환 자모, tensify의
+#    경음 초성, aspirate의 거센소리 초성). 방문할 자리가 적어 clean mutation 노출이 작다.
+#  - **전수 검사**: 결과물이 문법적으로 정상인 한글이라 값싼 신호가 없는 경우. 비용이 크고
+#    오탐 노출이 크다 — 이걸 줄이는 게 E6 perplexity 게이트의 존재 이유다.
+
+def _all_syllables(text: str) -> list[int]:
+    return [i for i, ch in enumerate(text) if is_syllable(ch)]
+
+
+def _compat_jamo(text: str) -> list[int]:
+    return [i for i, ch in enumerate(text) if ch in CHO_INDEX]
+
+
+def _onset_in(indices):
+    def rule(text: str) -> list[int]:
+        return [
+            i for i, ch in enumerate(text)
+            if is_syllable(ch) and split(ch)[0] in indices
+        ]
+    return rule
+
+
+def _nucleus_in(indices):
+    def rule(text: str) -> list[int]:
+        return [
+            i for i, ch in enumerate(text)
+            if is_syllable(ch) and split(ch)[1] in indices
+        ]
+    return rule
+
+
+def _onset_in_with_predecessor(indices):
+    """초성이 `indices`인 음절과 **그 바로 앞 음절**.
+
+    격음화처럼 두 음절에 걸쳐 일어나는 변환에 필요하다. 격음화는 앞 음절의 받침을 없애고
+    뒤 음절의 초성을 거센소리로 만드는데, 거센소리 초성만 후보로 잡으면 받침이 빠진 앞
+    음절을 방문조차 못 해 손상의 절반이 구조적으로 도달 불가가 된다(실측 46.6%).
+
+    앞 음절을 후보에 넣는 것은 난독화된 문자열만 보고 판단할 수 있으므로 입력 전용 규칙이라는
+    불변식을 깨지 않는다.
+    """
+    def rule(text: str) -> list[int]:
+        picked: set[int] = set()
+        for i, ch in enumerate(text):
+            if is_syllable(ch) and split(ch)[0] in indices:
+                picked.add(i)
+                if i > 0 and is_syllable(text[i - 1]):
+                    picked.add(i - 1)
+        return sorted(picked)
+    return rule
+
+
+# technique -> (모르는 슬롯, 후보 위치 규칙).
+# 슬롯 인덱스는 (초성, 중성, 종성) = (0, 1, 2). 나머지 슬롯은 입력에서 그대로 복사한다.
+TECHNIQUE_SPEC: dict[str, tuple[tuple[int, ...], object]] = {
+    "chosung": ((1, 2), _compat_jamo),                       # 초성은 주어짐
+    "tensify": ((0,), _onset_in(TENSE_CHO_INDICES)),          # 사실상 이진 되돌림 판단
+    "liaison": ((0, 2), _all_syllables),                      # 받침이 뒤로 넘어감
+    "palatalize": ((0, 2), _all_syllables),
+    "jongseong_cram": ((2,), _all_syllables),
+    "identity": ((), _all_syllables),
+    # --- E9 추가 ---
+    "liaison_correct": ((0, 2), _all_syllables),
+    "h_deletion": ((0, 2), _all_syllables),
+    # 거센소리 초성이 남으므로 tensify와 같은 구조의 좁은 규칙을 쓸 수 있다.
+    # 단 격음화는 두 음절에 걸치므로 앞 음절까지 후보에 넣어야 한다 — 안 그러면
+    # 받침이 빠진 앞 음절이 도달 불가가 된다(실측 46.6%).
+    "aspirate": ((0, 2), _onset_in_with_predecessor(PH.ASPIRATE_CHO_INDICES)),
+    # 혼동 가능한 모음을 가진 음절만. 중성 슬롯을 건드리는 유일한 기법이다.
+    "vowel_confuse": ((1,), _nucleus_in(PH.CONFUSABLE_JUNG_INDICES)),
+    "coda_neutralize": ((2,), _all_syllables),
+    "cluster_reduce": ((2,), _all_syllables),
+    "nasalize": ((0, 2), _all_syllables),
+    "lateralize": ((0, 2), _all_syllables),
+    "tensify_rule": ((0,), _onset_in(TENSE_CHO_INDICES)),
 }
+
+
+def resolve_spec(technique: str) -> tuple[tuple[int, ...], object]:
+    """단일 또는 조합 technique -> (모르는 슬롯, 후보 규칙).
+
+    조합 이름(`liaison+tensify`)은 구성 기법의 **합집합**으로 푼다. 모르는 슬롯은 슬롯의
+    합집합이고, 후보 위치는 각 규칙이 고른 자리의 합집합이다. 조합 난독화를 맞은 입력에서
+    어느 기법이 어느 자리를 건드렸는지 추론 시점에는 알 수 없으므로 합집합이 유일하게
+    정직한 선택이다.
+    """
+    if technique in TECHNIQUE_SPEC:
+        return TECHNIQUE_SPEC[technique]
+    parts = technique.split(COMPOSITE_SEP)
+    unknown = [p for p in parts if p not in TECHNIQUE_SPEC]
+    if len(parts) < 2 or unknown:
+        raise ValueError(f"후보 규칙이 정의되지 않은 technique: {technique}")
+    slots = tuple(sorted({s for p in parts for s in TECHNIQUE_SPEC[p][0]}))
+
+    def union_rule(text: str, _parts=tuple(parts)) -> list[int]:
+        seen: set[int] = set()
+        for name in _parts:
+            seen.update(TECHNIQUE_SPEC[name][1](text))
+        return sorted(seen)
+
+    return slots, union_rule
+
+
+def composite_name(techniques) -> str:
+    """조합 technique의 표준 이름. 구성 기법을 정렬해 이어 붙인다 — 순서가 달라도 같은 이름."""
+    names = sorted(set(techniques))
+    if not names:
+        raise ValueError("technique이 비었습니다.")
+    return names[0] if len(names) == 1 else COMPOSITE_SEP.join(names)
+
+
+class _UnknownSlots(dict):
+    """`UNKNOWN_SLOTS[technique]` 조회. 조합 이름은 합집합으로 계산해 캐시한다."""
+
+    def __missing__(self, technique: str) -> tuple[int, ...]:
+        slots = resolve_spec(technique)[0]
+        self[technique] = slots
+        return slots
+
+
+# 기법별로 "모르는 슬롯". 나머지 슬롯은 입력에서 그대로 복사하면 된다.
+UNKNOWN_SLOTS = _UnknownSlots({name: spec[0] for name, spec in TECHNIQUE_SPEC.items()})
 
 
 def candidate_positions(text: str, technique: str) -> list[int]:
     """입력만 보고 고른 후보 위치. 학습과 추론이 반드시 같은 규칙을 써야 한다."""
-    if technique == "chosung":
-        # 초성체는 완성형 음절이 호환 초성 낱자 하나로 바뀐다 — 눈에 보이는 값싼 신호.
-        return [i for i, ch in enumerate(text) if ch in CHO_INDEX]
-    if technique == "tensify":
-        # 경음 초성을 가진 음절만. 정상 된소리 단어도 여기 걸리는 게 문제의 핵심이다.
-        return [
-            i for i, ch in enumerate(text)
-            if is_syllable(ch) and split(ch)[0] in TENSE_CHO_INDICES
-        ]
-    if technique in ("liaison", "palatalize", "jongseong_cram", "identity"):
-        # 결과물이 문법적으로 정상인 한글 음절이라 값싼 신호가 없다 -> 전수 검사.
-        # 이 비용을 줄이는 게 E6 perplexity 게이트의 존재 이유다.
-        return [i for i, ch in enumerate(text) if is_syllable(ch)]
-    raise ValueError(f"후보 규칙이 정의되지 않은 technique: {technique}")
+    return resolve_spec(technique)[1](text)
 
 
 @dataclass(frozen=True)
