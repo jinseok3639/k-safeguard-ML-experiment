@@ -10,5 +10,15 @@
   ],
   "sealed_at": "2026-10-14T15:26:36Z",
   "added": [],
-  "reviews": []
+  "reviews": [
+    {
+      "at": "2026-10-14T15:42:18Z",
+      "verdict": "approve",
+      "feedback": "S03은 승인함.",
+      "runs_reviewed": [
+        "s03.1-per-edit-threshold"
+      ],
+      "unfinished": []
+    }
+  ]
 }
