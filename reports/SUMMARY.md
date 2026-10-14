@@ -281,10 +281,11 @@ tensify 모델이 그 자리를 "복원"하려 드는 교차 오염이 지금 �
    설정을 30,000문장으로 재실행, (b) liaison·jongseong_cram 단독과 E9b의 다른 조합
    프로파일도 실측, (c) "CER 감소 vs exact restoration 중 무엇이 중요한가"는 이번 실행의
    상관(0.546, 중간)만으로는 아직 확정 안 됨 — 더 많은 임계값·프로파일 조합이 필요하다.
-3. **BiLSTM + abstention(단일 기법)** — E8은 MLP로만 돌렸다. E2b가 단일 기법에서 BiLSTM이
-   더 낫다고 가리키므로 tensify·liaison·jongseong_cram 각각에 BiLSTM + abstention을 걸어
-   E8을 재현하는 실험은 아직 안 했다. (조합 난독화 쪽 BiLSTM 확인은 E9b Stage 3로 완료 —
-   위 finding 6과 [E9b](./E9B_COMPOSITION.md) 참고.)
+3. **BiLSTM + abstention(단일 기법)** — 2026-10-07 E8b로 실행했다. liaison·jongseong_cram은
+   BiLSTM이 명확히 낫고(오변경 ≤1%에서 +10.60%p / +48.67%p, MLP는 +5.99%p / +11.87%p),
+   tensify는 임계값 격자가 성겨 아키텍처 우열이 미결이다. 위 "기법별 판정" 표는 MLP(E8)
+   기준 그대로이니 BiLSTM 수치는 [E8b](./E8B_BILSTM_ABSTENTION.md)를 본다. 남은 일:
+   tensify 임계값 격자 세분화, 평가셋과 분리된 benign으로 임계값 고정.
 4. **초성체의 다른 경로** — 복원을 포기하고 "초성체 스팬이 있다"는 사실만 하위 가드레일에
    넘기는 방향. E4가 가리키는 유일하게 현실적인 길이다.
 5. **혼합 학습 예산 재설계** — E9b의 `universal/S+M`은 200,000 슬롯 예제 예산 안에서

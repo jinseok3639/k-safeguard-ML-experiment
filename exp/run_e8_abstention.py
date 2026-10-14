@@ -178,7 +178,7 @@ def main() -> None:
 
     metrics["status"] = "PROMOTE_CANDIDATE" if metrics["passing"] else "DO_NOT_PROMOTE"
     run.write_text("report.md", _report(metrics, args))
-    run.finish(metrics)
+    run.finish(metrics, headline=_headline(metrics))
     R.publish_baseline(
         "e8_abstention_v1.json", {"run_id": args.run_id, **metrics}, run_id=args.run_id
     )
@@ -186,6 +186,40 @@ def main() -> None:
     for entry in metrics["passing"]:
         print(f"  통과: {entry['technique']}/{entry['architecture']} thr={entry['threshold']} "
               f"mutation {entry['benign_clean_mutation']:.2%} CER감소 {entry['cer_reduction'] * 100:+.2f}%p")
+
+
+def _headline(metrics: dict) -> dict:
+    """기법×아키텍처마다: 오변경 기준을 지키는 임계값 중 CER 감소가 가장 큰 지점.
+
+    임계값을 평가 시드에서 고른 값이라 낙관적이다 — run끼리 견주는 용도로만 쓴다.
+    """
+    out: dict = {}
+    for technique, archs in metrics["sweeps"].items():
+        for architecture, entry in archs.items():
+            rows = [
+                (
+                    float(threshold),
+                    row["benign_clean_mutation"]["sentence_rate"],
+                    row["cer_reduction"]["cluster_balanced_estimate"] or 0.0,
+                    row["exact_restoration"]["cluster_balanced_estimate"] or 0.0,
+                )
+                for threshold, row in entry["thresholds"].items()
+            ]
+            summary: dict = {"fit_seconds": entry["fit_seconds"]}
+            for label, bar in (("at_bar", MUTATION_BAR), ("at_zero", 0.0)):
+                ok = [r for r in rows if r[1] <= bar]
+                if ok:
+                    best = max(ok, key=lambda r: r[2])
+                    summary[label] = {
+                        "threshold": best[0], "benign_mutation": best[1],
+                        "cer_reduction": best[2], "exact": best[3],
+                    }
+            loosest = min(rows, key=lambda r: r[0])
+            summary["no_abstention"] = {
+                "benign_mutation": loosest[1], "cer_reduction": loosest[2], "exact": loosest[3],
+            }
+            out.setdefault(technique, {})[architecture] = summary
+    return out
 
 
 def _report(metrics: dict, args: argparse.Namespace) -> str:
