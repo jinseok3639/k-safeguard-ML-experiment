@@ -1,16 +1,26 @@
-# 단계 s01-e8b-bilstm-abstention
+# S01 BiLSTM vs MLP (포기 임계값)
+
+- id: `s01-e8b-bilstm-abstention`
 
 > **소급 등록.** 이 단계의 run은 노트·리뷰 게이트가 생기기 전에 돌렸다. `stage.json`의
 > `sealed_at`은 게이트가 아니라 손으로 넣은 값(실행일)이다.
 
-## 이 단계의 목적
+## 질문
 단일 난독화 기법(tensify·liaison·jongseong_cram)에서 abstention을 건 상태로 BiLSTM이 MLP보다
-나은가. 탑재 후보 아키텍처를 정하기 위한 비교다.
+나은가? 탑재 후보 아키텍처를 정하기 위한 비교다.
 
-## 종합 해석
-run이 하나뿐이라 run 노트의 해석과 같다. liaison·jongseong_cram은 BiLSTM이 명확히 우세하고,
-tensify는 임계값 격자와 benign 표본 해상도 때문에 판정할 수 없다. 모든 "통과 지점" 수치는
-임계값을 평가 시드에서 골라 낙관적이다. 상세 수치표는 `reports/E8B_BILSTM_ABSTENTION.md`.
+## 답
+연음·받침 크래밍은 BiLSTM이 확실히 낫다. 된소리는 판정할 수 없다(임계값 격자·benign 표본이 성김).
+
+## 근거
+
+| 질문 | 기준 | 결과 | 판정 |
+|---|---|---|---|
+| 연음: BiLSTM이 나은가? | 오변경 ≤1%에서 CER 감소 | **+10.60 vs +5.99%p** (MLP) | BiLSTM 우세 |
+| 받침 크래밍: BiLSTM이 나은가? | 오변경 ≤1%에서 CER 감소 | **+48.67 vs +11.87%p** (MLP) | BiLSTM 우세 |
+| 된소리: BiLSTM이 나은가? | 같은 임계값·오변경 0.49% | **+6.94 vs +11.31%p** (MLP), 0.98% 지점은 BiLSTM +17.02 | 판정 불가 |
+
+주의: 임계값을 평가셋에서 골라 모든 수치가 낙관적이다. 시드 1개.
 
 ## 다음 단계 제안
 s02 — **임계값 선정 절차 고정 + tensify 재판정.**
@@ -28,6 +38,11 @@ s02 — **임계값 선정 절차 고정 + tensify 재판정.**
 - 위 제안의 방향과, held-out 코퍼스 문장을 benign 대용으로 써도 되는지(문어체라 505 시드의
   대화형 명령문과 분포가 다르다).
 - 승격 기준 CER 감소 ≥2%p를 계속 쓸지, exact 기준을 함께 볼지.
+
+## 세부 해석
+run이 하나뿐이라 run 노트의 해석과 같다. liaison·jongseong_cram은 BiLSTM이 명확히 우세하고,
+tensify는 임계값 격자와 benign 표본 해상도 때문에 판정할 수 없다. 모든 "통과 지점" 수치는
+임계값을 평가 시드에서 골라 낙관적이다. 상세 수치표는 `reports/E8B_BILSTM_ABSTENTION.md`.
 
 ## 리뷰 기록
 

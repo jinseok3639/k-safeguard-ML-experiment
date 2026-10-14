@@ -1,7 +1,23 @@
 # 실험 대장 — 복원기 트랙
 
-실험 하나당 한 줄. 실패한 실험도 지우지 않는다 — 저장소의 `TENSIFY_LOCKED_RESULT.md`
-선례대로, 안 되는 것을 기록해 두는 것도 결과다.
+실패한 실험도 지우지 않는다 — 저장소의 `TENSIFY_LOCKED_RESULT.md` 선례대로, 안 되는 것을
+기록해 두는 것도 결과다.
+
+## 단계별 요약
+
+단계(질문 하나) 하나에 한 줄. 각 단계 문서는 맨 위에 질문 → 답 → 근거 숫자 → 다음 순서로 쓰여
+있다. 이 표는 `python -m restoration.exp.stage sync <단계-id>`가 단계 문서에서 다시 만든다.
+
+<!-- stages:begin (stage sync가 다시 쓴다. 손으로 고치지 않는다) -->
+| 단계 | 질문 | 답 | 상태 | 문서 |
+|---|---|---|---|---|
+| **S01 BiLSTM vs MLP (포기 임계값)** | 단일 난독화 기법(tensify·liaison·jongseong_cram)에서 abstention을 건 상태로 BiLSTM이 MLP보다 나은가? | 연음·받침 크래밍은 BiLSTM이 확실히 낫다. 된소리는 판정할 수 없다(임계값 격자·benign 표본이 성김). | 승인됨 | [S01](./notes/s01-e8b-bilstm-abstention/STAGE.md) |
+| **S02 생성기 의존도** | 복원기가 우리 난독화 생성기(`kslab/obfuscate.py`)에 묶여 있나? | 그렇다 — 복원기는 우리 생성기 패턴을 외운 것이고, 남은 성능도 기법 공통 임계값 하나가 깎아 먹는다. | 리뷰 대기 | [S02](./notes/s02-generator-dependence/STAGE.md) |
+<!-- stages:end -->
+
+## run 기록
+
+run 하나당 한 줄. 단계 도입 전(E0~E10)은 이 표와 `reports/`가 유일한 해석 기록이다.
 
 상태 값:
 `SEED_TRAINED_DIAGNOSTIC`(진단 전용, 모델 아님) ·

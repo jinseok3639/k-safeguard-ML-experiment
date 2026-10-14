@@ -1,5 +1,6 @@
-# e11d-oracle-detector-20261014
+# S02.4 완벽한 탐지기 가정 (상한)
 
+- id: `e11d-oracle-detector-20261014`
 - 단계: `s02-generator-dependence`
 - 비교 대상: `e8-mlp-bilstm-30k-20261007` (단일 기법 모델)
 - 실행 명령: `python -m restoration.exp.run_e11_generator_dependence --run-id e11d-oracle-detector-20261014 --part d --no-progress`

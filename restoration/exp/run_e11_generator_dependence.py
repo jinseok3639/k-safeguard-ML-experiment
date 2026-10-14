@@ -45,6 +45,7 @@ from kslab import features as F
 from kslab import metrics as M
 from kslab import pairs as P
 from kslab import record as R
+from kslab import tracking
 from kslab.jamo import CHO_INDEX, is_syllable, join
 from kslab.models.bilstm import BiLstmSlotRestorer, _input_slots
 
@@ -190,12 +191,13 @@ def _checkpoint(label: str, seed: int) -> Path:
 
 def _fit(technique, pairs, seed, label, args) -> tuple[BiLstmSlotRestorer, dict]:
     started = time.time()
-    model = BiLstmSlotRestorer(
-        technique, max_len=96, embed_dim=96, hidden=112, layers=2,
-        epochs=args.epochs, batch_size=128, random_state=seed,
-        threads=args.threads, device=args.device,
-    ).fit(pairs, checkpoint_path=_checkpoint(label, seed), checkpoint_every=0,
-          show_progress=not args.no_progress)
+    with tracking.fit_label(f"{label}/seed{seed}"):
+        model = BiLstmSlotRestorer(
+            technique, max_len=96, embed_dim=96, hidden=112, layers=2,
+            epochs=args.epochs, batch_size=128, random_state=seed,
+            threads=args.threads, device=args.device,
+        ).fit(pairs, checkpoint_path=_checkpoint(label, seed), checkpoint_every=0,
+              show_progress=not args.no_progress)
     return model, {
         "fit_seconds": round(time.time() - started, 1),
         "pairs": len(pairs),

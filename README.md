@@ -78,38 +78,60 @@ DATASETS.md       데이터셋 조사와 사용 결정
 
 `env.sh`/`env.ps1`을 거치면 러너가 끝날 때마다 MLflow에도 기록된다. 러너를 고칠 필요는
 없다 — `kslab/record.py`의 `Run.start()`/`Run.finish()`가 `kslab/tracking.py`를 부른다.
-두 트랙이 같은 MLflow 저장소를 쓰고, run마다 `kslab.track` 태그로 구분된다.
+구성은 MLflow 공식 문서의 방식(실험 = 과제, 부모·자식 run으로 묶기, 태그로 거르기, 노트로
+설명)을 따른다.
 
 ```bash
 source ./env.sh
-mlflow ui --port 5000        # http://127.0.0.1:5000
+mlflow ui --port 5000 --artifacts-destination "$KSLAB_ROOT/data/mlflow/served-artifacts"
+# 브라우저에서 http://127.0.0.1:5000
 ```
+
+`--artifacts-destination`은 MLflow 연습 스크립트처럼 **서버 주소로** 기록하는 코드가 올리는
+artifact의 저장 위치다. 빼면 명령을 실행한 폴더에 `mlartifacts/`가 생긴다. 러너는 서버를 거치지
+않고 sqlite에 직접 쓰므로 이 옵션과 무관하다.
+
+### 화면에서 보이는 구조
+
+```
+restoration                                   ← 실험(Experiment) = 트랙
+  S02 생성기 의존도                             ← 단계 run. Notes = STAGE.md (질문·답·근거)
+    S02.2 기법군 빼고 학습                      ← 실험 run. Notes = run 노트
+      bilstm · minus_tensify · seed2026         ← 모델 학습 한 번. loss 곡선·하이퍼파라미터
+  S00 단계 도입 전 실험 (E0~E10)                ← 옛 실험(집계 수치만)
+guardrail                                     ← 가드레일 트랙 (첫 run부터 생긴다)
+```
+
+### 처음 볼 때
+
+1. 왼쪽에서 `restoration`을 누른다. 단계 run(`S02 …`)이 보이고, 왼쪽 `+`로 펼치면 그 안의
+   실험 run이 나온다.
+2. **단계 run을 누르면 Notes 칸 맨 위에 질문 → 답 → 근거 숫자**가 있다. 대부분은 여기서 끝난다.
+3. 숫자를 확인하고 싶으면 실험 run → **Artifacts → `report.md`**(정리된 표). 원본 수치 전체는
+   `metrics.json`이다.
+4. 학습 곡선은 모델 run(`bilstm · …`) → Model metrics → `loss`.
+
+### 무엇이 어디에 있나
 
 | MLflow | 내용 |
 |---|---|
-| experiment / run name | 러너의 experiment 이름 / run-id. 스모크 실행은 `_smoke` experiment |
-| description | 노트의 "왜 돌리나"·"무엇을 바꿨나" (노트가 없는 스모크는 러너 docstring) |
-| params | `config` |
-| metrics | `finish(metrics)`의 수치를 `sweeps/tensify/bilstm/...` 식 키로 평탄화 |
-| tags | 트랙(`kslab.track`), 판정(`status`), git 커밋·dirty, 실행 명령, 호스트, 패키지 버전 |
-| datasets | `add_input()`으로 등록한 입력의 이름·SHA-256·경로 (내용은 싣지 않음) |
-| params (`fit.*`) | 모델이 `fit()`에서 스스로 올리는 하이퍼파라미터·학습 표본 수 — 러너에 하드코딩된 값도 잡힌다 |
-| metrics (`headline/*`) | 러너가 고른 대표 지표. run끼리 비교할 때는 이것만 보면 된다 (`finish(metrics, headline=...)`) |
-| metrics (`train/*/loss`) | epoch별 학습 loss (MLP·BiLSTM) |
-| artifacts | `<트랙>/results/<run-id>/`의 `.md`·`.json`(report, metrics, manifest, 시작 시점 노트)와 `code.diff`(미커밋 변경 전체)·`pip-freeze.txt` |
-| 노트·리뷰 | 태그 `kslab.stage`·`kslab.compares_to`·`review.status`·`review.feedback` |
+| run 이름 | 사람이 보는 이름(`S02.2 기법군 빼고 학습`). 기계용 id는 태그 `kslab.run_id` |
+| Notes | 단계 run: `STAGE.md`. 실험 run: run 노트(실행 시점 → `stage sync`로 해석까지 갱신) |
+| Metrics | **요약만** — `headline/*`(러너가 고른 대표 지표)와 요약 수치. 세부 평가표(`evaluations`·`models`)는 싣지 않는다. run 하나에 수천 개를 올리면 화면이 멈춘다 |
+| Parameters | `config`. 모델 run에는 그 모델의 하이퍼파라미터·학습 표본 수 |
+| Tags | 트랙, 단계, 판정(`status`), 리뷰 상태(`review.status`), git 커밋·dirty, 실행 명령, 패키지 버전 |
+| Datasets | `add_input()`으로 등록한 입력의 이름·SHA-256·경로 (내용은 싣지 않음) |
+| Artifacts | `report.md`, `metrics.json`(전체 수치), `manifest.json`, 시작 시점 노트, `code.diff`, `pip-freeze.txt` |
 
-- 저장소는 `data/mlflow/`(sqlite + artifacts)이고 커밋되지 않는다. 원본은 여전히
-  `<트랙>/results/<run-id>/`이며 MLflow 기록이 실패해도 실험은 멈추지 않는다.
-- `predictions.jsonl`처럼 공격 원문이 든 산출물은 MLflow에 올리지 않는다.
-- 러너의 stdout은 `results/<run-id>/run.log`에 남는다. 러너가 원문 예시를 찍는 경우가 있어
-  MLflow에는 올리지 않는다.
-- 대표 지표(`headline`)는 지금 E8 러너에만 있다. 새 러너는 `finish()`에 직접 넘긴다.
+- 저장소는 `data/mlflow/`(sqlite + artifacts)이고 커밋되지 않는다. **원본은 `<트랙>/results/<run-id>/`와
+  `<트랙>/notes/`**이며 MLflow 기록이 실패해도 실험은 멈추지 않는다.
+- 기록 구성을 바꿨거나 다른 머신에서 새로 받았으면 `python -m kslab.mlflow_rebuild`로 원본에서
+  다시 쓴다. 기존 저장소는 지우지 않고 `data/mlflow/v1-<시각>/`로 옮긴다(실행 중인 `mlflow ui`는 먼저 끈다).
+  결과 폴더가 없는 옛 실험(E0~E10)은 `restoration/baselines/*.json`에서 수치만 옮긴다.
+- `predictions.jsonl`처럼 공격 원문이 든 산출물과 `run.log`(원문 예시가 찍힐 수 있음)는 MLflow에
+  올리지 않는다.
 - 러너가 `finish()` 전에 죽거나 중단되면 그 run은 `FAILED`로 남는다.
-- MLflow 도입 전 복원기 실험(E0~E10)은 `python -m restoration.exp.backfill_mlflow`로
-  `restoration/baselines/*.json`에서 수치만 옮겼다(`kslab.backfilled=true`). 다른 머신에서
-  새로 받았을 때도 이걸 한 번 돌리면 된다.
-- 기록을 끄려면 `KSLAB_MLFLOW=0`.
+- 기록을 끄려면 `KSLAB_MLFLOW=0`. 테스트는 임시 저장소를 쓰거나 기록을 끈다.
 
 ## 실행 환경
 

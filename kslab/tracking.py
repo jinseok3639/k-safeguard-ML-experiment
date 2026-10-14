@@ -3,20 +3,25 @@
 러너는 이 모듈을 직접 부르지 않는다. `Run.start()`/`Run.finish()`가 대신 부르므로
 러너를 고치지 않아도 전부 기록된다.
 
-무엇이 어디로 가는가:
+MLflow 공식 문서의 구성(실험 = 과제, 부모·자식 run으로 묶기, 태그로 거르기, 노트로 설명)을
+따른다. 화면에서는 세 층으로 보인다.
+
+    experiment  restoration                      ← 트랙(과제) 하나
+      └ run     S02 생성기 의존도                 ← 단계(질문 하나). 노트 = STAGE.md
+          └ run S02.2 기법군 빼고 학습            ← 실험 run. 노트 = run 노트
+              └ run bilstm · minus_tensify · seed2026   ← 모델 학습 한 번(loss 곡선)
 
 | MLflow | 내용 |
 |---|---|
-| experiment | 러너의 `experiment` 이름(`E8_abstention` 등). 스모크 실행은 `_smoke` |
-| run name | run-id |
-| description | 러너 모듈 docstring — 그 실험의 목적 |
+| experiment | 트랙 이름(`restoration`, `guardrail`). 스모크 실행은 `_smoke` |
+| run name | 사람이 보는 이름(`S02.2 기법군 빼고 학습`). 기계용 id는 `kslab.run_id` 태그 |
+| note | 실행 시점의 run 노트 → `stage sync`로 해석까지 갱신 |
 | params | `config`를 평탄화한 것 |
-| metrics | `finish(metrics)`의 수치를 `a/b/c` 키로 평탄화한 것 |
+| metrics | **요약만**: `headline/*`와 러너의 요약 수치. 세부 평가표(`evaluations`·`models`)와
+  수치가 너무 많은 결과는 싣지 않는다 — `metrics.json` artifact에 전부 있다 |
 | tags | 판정(status), git 커밋·dirty, 실행 명령, 호스트, 패키지 버전 |
 | datasets | `add_input()`으로 등록한 입력의 이름·SHA-256·경로 (내용은 싣지 않는다) |
-| params (`fit.*`) | 모델이 fit()에서 스스로 올리는 하이퍼파라미터 — 러너에 하드코딩된 값 포함 |
-| metrics (`headline/*`) | 러너가 고른 대표 지표 몇 개. run 비교표에서는 이것만 보면 된다 |
-| metrics (`train/*/loss`) | epoch별 학습 loss (step 축) |
+| 자식 run | 모델이 fit()할 때마다 하나. 하이퍼파라미터(params)와 epoch별 `loss` |
 | artifacts | run 디렉터리의 `.md`·`.json` (report, metrics, manifest, 노트)와 `code.diff`·`pip-freeze.txt` |
 
 `predictions.jsonl`처럼 공격 원문이 든 산출물은 artifact로 올리지 않는다 — `results/`에만
@@ -54,6 +59,11 @@ _METRIC_BATCH = 1000
 # MLflow metric 이름 규칙: 영숫자, _ - . 공백 : / 만 허용.
 _INVALID_KEY_CHARS = re.compile(r"[^A-Za-z0-9_\-. :]")
 _PARAM_BATCH = 100
+# MLflow 화면이 run 하나에 지표 수천 개를 받으면 브라우저가 멈춘다(s02 e11b: 12,947개).
+# 세부 표는 이 키 아래에 두고 artifact로만 본다. 그래도 넘치면 headline만 싣는다.
+DETAIL_KEYS = ("evaluations", "models", "fits")
+MAX_SUMMARY_METRICS = 400
+STAGE_KIND = "stage"
 
 
 def tracking_uri() -> str | None:
@@ -115,6 +125,35 @@ def flatten(payload: Any, prefix: str = "") -> tuple[dict[str, float], dict[str,
     return numbers, texts
 
 
+def _row_metrics(name: str, rows: list) -> dict[str, float]:
+    """`passing` 같은 요약 행 목록을 지표로. 행의 문자열 칸을 이어 이름으로 쓴다."""
+    table: dict[str, Any] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        label = "_".join(str(v) for v in row.values() if isinstance(v, str)) or str(len(table))
+        table[label] = {k: v for k, v in row.items() if not isinstance(v, str)}
+    return flatten({name: table})[0]
+
+
+def summary_metrics(metrics: dict[str, Any]) -> dict[str, float]:
+    """MLflow에 올릴 요약 지표. 세부 표(DETAIL_KEYS)를 빼고, 그래도 많으면 headline만.
+
+    headline이 없는 옛 run은 최상위의 행 목록(`passing` 등 러너가 고른 통과 지점)을 대신 쓴다.
+    """
+    summary = {k: v for k, v in metrics.items() if k not in DETAIL_KEYS}
+    numbers, _ = flatten(summary)
+    if len(numbers) <= MAX_SUMMARY_METRICS:
+        return numbers
+    if metrics.get("headline"):
+        return flatten({"headline": metrics["headline"]})[0]
+    numbers = {}
+    for key, value in metrics.items():
+        if isinstance(value, list) and value and all(isinstance(v, dict) for v in value):
+            numbers.update(_row_metrics(key, value))
+    return numbers if len(numbers) <= MAX_SUMMARY_METRICS else {}
+
+
 def _param_value(value: Any) -> str:
     text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
     return text[:_PARAM_LIMIT]
@@ -142,6 +181,13 @@ def _client(uri: str):
     if uri.startswith("sqlite:"):
         MLFLOW_DIR.mkdir(parents=True, exist_ok=True)
     return MlflowClient(tracking_uri=uri)
+
+
+def experiment_name(track: str | None, smoke: bool = False) -> str:
+    """MLflow experiment = 트랙. 트랙 밖(테스트 등)에서 부르면 `_untracked`."""
+    if smoke:
+        return SMOKE_EXPERIMENT
+    return track or "_untracked"
 
 
 def _experiment_id(client, name: str) -> str:
@@ -184,19 +230,50 @@ def _log_inputs(client, run_id: str, inputs: dict[str, dict[str, Any]]) -> None:
 # 지금 프로세스에서 열려 있는 run. 모델의 fit()이 러너를 거치지 않고 여기로 기록한다.
 _ACTIVE: "Tracker | None" = None
 _FITS: list[dict[str, Any]] = []
+_LABEL: str | None = None
+
+
+class fit_label:
+    """러너가 다음 fit()에 붙일 이름(`minus_tensify/seed2026`). 자식 run 이름에 들어간다.
+
+        with tracking.fit_label(f"{label}/seed{seed}"):
+            model.fit(...)
+    """
+
+    def __init__(self, label: str) -> None:
+        self.label = label
+
+    def __enter__(self) -> "fit_label":
+        global _LABEL
+        self._previous, _LABEL = _LABEL, self.label
+        return self
+
+    def __exit__(self, *_exc) -> None:
+        global _LABEL
+        _LABEL = self._previous
+
+
+def fit_run_name(kind: str, technique: str, label: str | None, seed: Any) -> str:
+    """자식 run 이름. 합집합 기법(`a+b+...`)은 길어서 개수로 줄인다."""
+    if label:
+        return f"{kind} · {label.replace('/', ' · ')}"
+    if "+" in technique:
+        technique = f"합집합 {technique.count('+') + 1}기법"
+    return f"{kind} · {technique}" + (f" · seed{seed}" if seed is not None else "")
 
 
 class FitLog:
-    """학습 한 번의 기록 — 하이퍼파라미터와 epoch별 loss."""
+    """학습 한 번의 기록 — 하이퍼파라미터와 epoch별 loss. MLflow에서는 자식 run 하나."""
 
-    def __init__(self, key: str, entry: dict[str, Any]) -> None:
+    def __init__(self, key: str, entry: dict[str, Any], child_id: str | None = None) -> None:
         self.key = key
         self.entry = entry
+        self.child_id = child_id
 
     def epoch(self, step: int, loss: float) -> None:
         self.entry["loss"].append([int(step), float(loss)])
-        if _ACTIVE is not None:
-            _ACTIVE.log_step(f"train/{self.key}/loss", loss, step)
+        if _ACTIVE is not None and self.child_id is not None:
+            _ACTIVE.log_step("loss", loss, step, run_id=self.child_id)
 
 
 def begin_fit(kind: str, model: Any, **extra: Any) -> FitLog:
@@ -216,10 +293,15 @@ def begin_fit(kind: str, model: Any, **extra: Any) -> FitLog:
     }
     hyper.update(extra)
     entry = {"key": key, "base": base, "kind": kind, "hyperparameters": hyper, "loss": []}
+    if _LABEL:
+        entry["label"] = _LABEL
     _FITS.append(entry)
+    child_id = None
     if _ACTIVE is not None:
-        _ACTIVE.try_log_params({f"fit.{key}.{name}": _param_value(v) for name, v in hyper.items()})
-    return FitLog(key, entry)
+        name = fit_run_name(kind, str(getattr(model, "technique", None) or "all"),
+                            _LABEL, hyper.get("random_state"))
+        child_id = _ACTIVE.open_child(name, hyper, {"kslab.fit_key": key})
+    return FitLog(key, entry, child_id)
 
 
 def fits() -> list[dict[str, Any]]:
@@ -230,36 +312,87 @@ def reset_fits() -> None:
     _FITS.clear()
 
 
-def find_runs(client, run_name: str) -> list:
-    """run 이름(=run-id)으로 MLflow run을 찾는다. 모든 experiment를 본다."""
+def find_runs(client, run_id: str) -> list:
+    """기계용 run-id(`kslab.run_id` 태그)로 MLflow run을 찾는다. 모든 experiment를 본다."""
     ids = [e.experiment_id for e in client.search_experiments()]
     if not ids:
         return []
-    return client.search_runs(ids, f"attributes.run_name = '{run_name}'")
+    return client.search_runs(ids, f"tags.`kslab.run_id` = '{run_id}'")
 
 
-def update_run(run_name: str, description: str | None, tags: dict[str, Any]) -> int:
-    """이미 끝난 run의 설명·태그를 갱신한다(해석을 쓴 뒤, 리뷰를 받은 뒤). 갱신한 run 수를 돌려준다."""
+def _set_tags(client, run_id: str, tags: dict[str, Any]) -> None:
+    for key, value in tags.items():
+        if value is not None:
+            client.set_tag(run_id, key, str(value)[:_TAG_LIMIT])
+
+
+def ensure_stage_run(
+    client, experiment: str, stage_id: str, display_name: str,
+    note: str | None = None, tags: dict[str, Any] | None = None,
+    start_time_ms: int | None = None,
+) -> str:
+    """단계를 나타내는 부모 run을 찾거나 만든다. 실험 run은 이 run의 자식으로 붙는다."""
+    experiment_id = _experiment_id(client, experiment)
+    found = client.search_runs(
+        [experiment_id],
+        f"tags.`kslab.kind` = '{STAGE_KIND}' and tags.`kslab.stage` = '{stage_id}'",
+    )
+    if found:
+        run_id = found[0].info.run_id
+    else:
+        run = client.create_run(experiment_id, start_time=start_time_ms, tags={
+            "kslab.kind": STAGE_KIND, "kslab.stage": stage_id,
+        })
+        run_id = run.info.run_id
+        # 단계 run은 묶음일 뿐 실행되는 것이 없다. 화면에서 '실행 중'으로 돌지 않게 닫아 둔다.
+        client.set_terminated(run_id, "FINISHED", end_time=start_time_ms)
+    all_tags = {"mlflow.runName": display_name, **(tags or {})}
+    if note is not None:
+        all_tags["mlflow.note.content"] = note[:_TAG_LIMIT]
+    _set_tags(client, run_id, all_tags)
+    return run_id
+
+
+def update_run(
+    run_id: str, description: str | None, tags: dict[str, Any],
+    *, display_name: str | None = None, parent_run_id: str | None = None,
+) -> int:
+    """이미 끝난 run의 이름·노트·태그·부모를 갱신한다(해석을 쓴 뒤, 리뷰를 받은 뒤).
+    갱신한 run 수를 돌려준다."""
     uri = tracking_uri()
     if uri is None:
         return 0
     client = _client(uri)
-    found = find_runs(client, run_name)
+    found = find_runs(client, run_id)
     for run in found:
+        extra: dict[str, Any] = {}
         if description is not None:
-            client.set_tag(run.info.run_id, "mlflow.note.content", description[:_TAG_LIMIT])
-        for key, value in tags.items():
-            if value is not None:
-                client.set_tag(run.info.run_id, key, str(value)[:_TAG_LIMIT])
+            extra["mlflow.note.content"] = description
+        if display_name:
+            extra["mlflow.runName"] = display_name
+        if parent_run_id:
+            extra["mlflow.parentRunId"] = parent_run_id
+        _set_tags(client, run.info.run_id, {**extra, **tags})
     return len(found)
+
+
+def sync_stage_run(
+    experiment: str, stage_id: str, display_name: str, note: str, tags: dict[str, Any]
+) -> str | None:
+    uri = tracking_uri()
+    if uri is None:
+        return None
+    return ensure_stage_run(_client(uri), experiment, stage_id, display_name, note, tags)
 
 
 class Tracker:
     """MLflow run 하나. 실패는 경고만 남기고 삼킨다."""
 
-    def __init__(self, client, run_id: str) -> None:
+    def __init__(self, client, run_id: str, experiment_id: str | None = None) -> None:
         self.client = client
         self.run_id = run_id
+        self.experiment_id = experiment_id
+        self.children: list[str] = []
         self._closed = False
         atexit.register(self._abandon)
 
@@ -273,7 +406,11 @@ class Tracker:
         description: str | None = None,
         *,
         start_time_ms: int | None = None,
+        stage: dict[str, Any] | None = None,
+        activate: bool = True,
     ) -> "Tracker | None":
+        """run_name 은 화면에 보이는 이름. stage 를 주면 그 단계 부모 run 아래에 붙는다
+        (`id`, `display_name`, `note` 키)."""
         uri = tracking_uri()
         if uri is None:
             return None
@@ -283,36 +420,65 @@ class Tracker:
             all_tags["mlflow.runName"] = run_name
             if description:
                 all_tags["mlflow.note.content"] = description.strip()[:_TAG_LIMIT]
-            run = client.create_run(
-                _experiment_id(client, experiment), start_time=start_time_ms, tags=all_tags
-            )
-            tracker = cls(client, run.info.run_id)
+            if stage:
+                all_tags["mlflow.parentRunId"] = ensure_stage_run(
+                    client, experiment, stage["id"], stage["display_name"],
+                    stage.get("note"), stage.get("tags"), start_time_ms,
+                )
+            experiment_id = _experiment_id(client, experiment)
+            run = client.create_run(experiment_id, start_time=start_time_ms, tags=all_tags)
+            tracker = cls(client, run.info.run_id, experiment_id)
             tracker.log_params(flatten_params(config))
-            global _ACTIVE
-            _ACTIVE = tracker
+            if activate:
+                global _ACTIVE
+                _ACTIVE = tracker
             return tracker
         except Exception as error:  # noqa: BLE001 — 기록 실패가 실험을 죽이면 안 된다
             print(f"[mlflow] 기록을 시작하지 못했습니다(실험은 계속): {error}", file=sys.stderr)
             return None
 
-    def log_params(self, params: dict[str, str]) -> None:
+    def log_params(self, params: dict[str, str], run_id: str | None = None) -> None:
         from mlflow.entities import Param
 
         items = [Param(k, v) for k, v in params.items()]
         for chunk in _chunks(items, _PARAM_BATCH):
-            self.client.log_batch(self.run_id, params=chunk)
+            self.client.log_batch(run_id or self.run_id, params=chunk)
 
-    def try_log_params(self, params: dict[str, str]) -> None:
+    def open_child(
+        self, name: str, hyper: dict[str, Any], tags: dict[str, Any] | None = None,
+        *, start_time_ms: int | None = None,
+    ) -> str | None:
+        """모델 학습 한 번 = 자식 run 하나. 앞서 열린 자식은 닫는다(학습은 차례로 돈다)."""
         try:
-            self.log_params(params)
+            self._close_children(end_time_ms=start_time_ms)
+            all_tags = {"mlflow.runName": name, "mlflow.parentRunId": self.run_id,
+                        "kslab.kind": "fit", **(tags or {})}
+            run = self.client.create_run(
+                self.experiment_id, start_time=start_time_ms,
+                tags={k: str(v)[:_TAG_LIMIT] for k, v in all_tags.items() if v is not None},
+            )
+            self.children.append(run.info.run_id)
+            self.log_params({k: _param_value(v) for k, v in hyper.items()}, run.info.run_id)
+            return run.info.run_id
         except Exception as error:  # noqa: BLE001
-            print(f"[mlflow] 학습 설정을 기록하지 못했습니다: {error}", file=sys.stderr)
+            print(f"[mlflow] 학습 기록(자식 run)을 만들지 못했습니다: {error}", file=sys.stderr)
+            return None
 
-    def log_step(self, key: str, value: float, step: int) -> None:
+    def _close_children(self, status: str = "FINISHED", end_time_ms: int | None = None) -> None:
+        while self.children:
+            child = self.children.pop()
+            try:
+                self.client.set_terminated(child, status, end_time=end_time_ms)
+            except Exception:  # noqa: BLE001
+                pass
+
+    def log_step(self, key: str, value: float, step: int, run_id: str | None = None,
+                 timestamp_ms: int | None = None) -> None:
         try:
             if math.isfinite(value):
                 self.client.log_metric(
-                    self.run_id, key, float(value), int(time.time() * 1000), int(step)
+                    run_id or self.run_id, key, float(value),
+                    timestamp_ms or int(time.time() * 1000), int(step),
                 )
         except Exception as error:  # noqa: BLE001
             print(f"[mlflow] {key} 를 기록하지 못했습니다: {error}", file=sys.stderr)
@@ -352,15 +518,17 @@ class Tracker:
         end_time_ms: int | None = None,
     ) -> None:
         try:
-            numbers, texts = flatten(metrics)
-            self.log_metrics(numbers)
+            self.log_metrics(summary_metrics(metrics))
+            _, texts = flatten(metrics)
             # 최상위 문자열(status 등)만 tag로 올린다. 깊은 곳의 문자열은 artifact에 있다.
             self.set_tags({k: v for k, v in texts.items() if "/" not in k})
+            self.set_tags({"kslab.metrics_detail": "metrics.json (artifact)"})
             self.set_tags(tags or {})
             if inputs:
                 _log_inputs(self.client, self.run_id, inputs)
             if directory is not None:
                 self.log_directory(directory)
+            self._close_children(end_time_ms=end_time_ms)
             self.client.set_terminated(self.run_id, "FINISHED", end_time=end_time_ms)
             self._closed = True
             self._release()
@@ -378,6 +546,7 @@ class Tracker:
         if self._closed:
             return
         try:
+            self._close_children("FAILED")
             self.client.set_terminated(self.run_id, "FAILED")
         except Exception:  # noqa: BLE001
             pass

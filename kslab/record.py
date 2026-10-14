@@ -257,6 +257,7 @@ class Run:
         (directory / "pip-freeze.txt").write_text(pip_freeze(), encoding="utf-8")
         description = tracking.main_docstring()
         note_tags: dict[str, Any] = {}
+        display_name, stage = run_id, None
         if ticket is not None:
             # 실행 전 칸이 나중에 바뀌었는지 가릴 수 있게 시작 시점 사본과 해시를 남긴다.
             (directory / "note-at-start.md").write_text(ticket.note_text, encoding="utf-8")
@@ -274,12 +275,18 @@ class Run:
                 "note.interpreted": "false",
                 "review.status": "pending",
             }
+            display_name = ticket.run_display_name or run_id
+            stage = {"id": ticket.stage_id, "display_name": ticket.stage_display_name,
+                     "note": ticket.stage_note,
+                     "tags": {"kslab.track": tracks.current(required=False)}}
         tracker = tracking.Tracker.start(
-            run_id,
-            tracking.SMOKE_EXPERIMENT if smoke else experiment,
+            display_name,
+            tracking.experiment_name(tracks.current(required=False), smoke),
             config,
+            stage=stage,
             tags={
                 **note_tags,
+                "kslab.run_id": run_id,
                 "kslab.track": tracks.current(required=False),
                 "kslab.code_diff": "code.diff" if patch else None,
                 "kslab.experiment": experiment,

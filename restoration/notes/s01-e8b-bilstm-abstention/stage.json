@@ -17,5 +17,9 @@
       "unfinished": []
     }
   ],
-  "retroactive": true
+  "retroactive": true,
+  "title": "BiLSTM vs MLP (포기 임계값)",
+  "titles": {
+    "e8-mlp-bilstm-30k-20261007": "단일 기법 MLP·BiLSTM 비교"
+  }
 }

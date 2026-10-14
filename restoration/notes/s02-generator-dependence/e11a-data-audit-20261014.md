@@ -1,5 +1,6 @@
-# e11a-data-audit-20261014
+# S02.1 KOTOX 평가 데이터 감사
 
+- id: `e11a-data-audit-20261014`
 - 단계: `s02-generator-dependence`
 - 비교 대상: 없음 (데이터 구축)
 - 실행 명령: `python -m restoration.exp.run_e11_generator_dependence --run-id e11a-data-audit-20261014 --part a`

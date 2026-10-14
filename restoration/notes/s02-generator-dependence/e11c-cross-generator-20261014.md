@@ -1,5 +1,6 @@
-# e11c-cross-generator-20261014
+# S02.3 KOTOX에 적용 (교차 생성기)
 
+- id: `e11c-cross-generator-20261014`
 - 단계: `s02-generator-dependence`
 - 비교 대상: `e11b-family-holdout-20261014` (같은 모델, 다른 평가셋)
 - 실행 명령: `python -m restoration.exp.run_e11_generator_dependence --run-id e11c-cross-generator-20261014 --part c --no-progress`

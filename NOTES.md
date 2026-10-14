@@ -13,23 +13,51 @@
 ```
 <트랙>/notes/
   <단계-id>/
-    STAGE.md        단계의 목적 · 종합 해석 · 다음 단계 제안 · 리뷰 기록
-    stage.json      run 목록, 봉인 시각, 나중에 추가된 run, 리뷰 (기계가 읽는다)
+    STAGE.md        질문 → 답 → 근거 → 다음 단계 제안 → 세부 해석 → 리뷰 기록 (결론이 맨 위)
+    stage.json      제목, run 목록, 봉인 시각, 나중에 추가된 run, 리뷰 (기계가 읽는다)
     <run-id>.md     run 하나의 노트: 왜 돌리나 / 무엇을 바꿨나 / 해석 / 다음
 ```
 
-**단계**는 함께 계획한 run의 묶음이고 리뷰의 단위다. 한 단계의 run은 병렬로 돌려도 되고,
-리뷰는 단계당 한 번 받는다.
+**단계**는 질문 하나에 답하려고 함께 계획한 run의 묶음이고 리뷰의 단위다. 한 단계의 run은
+병렬로 돌려도 되고, 리뷰는 단계당 한 번 받는다. 실험 대장(`<트랙>/EXPERIMENTS.md`) 맨 위의
+단계 표는 `stage sync`가 각 `STAGE.md`의 질문·답에서 다시 만든다.
+
+## 이름 규칙
+
+이름은 두 겹이다. **기계용 id**는 폴더·결과 경로에 쓰고 한 번 정하면 바꾸지 않는다. **보이는
+이름**은 `--title`로 주고 언제든 `stage title`로 바꿀 수 있다. MLflow 화면, 노트 제목, 실험 대장에는
+보이는 이름이 나온다.
+
+| | id (영문, 바꾸지 않음) | 보이는 이름 (한국어) |
+|---|---|---|
+| 단계 | `s03-per-slot-threshold` | `S03 기법별 임계값` |
+| run | `s03.1-threshold-sweep` | `S03.1 기법별 임계값 스윕` (번호는 단계 안 순서) |
+
+- 날짜는 id에 넣지 않는다 — manifest와 MLflow에 실행 시각이 있다. (s02까지의 run-id에는 날짜가
+  들어 있다. 바꾸지 않고 그대로 둔다.)
+- 제목은 "무엇을 했나"가 보이게 짧게 쓴다. `e11b`처럼 의미 없는 기호를 쓰지 않는다.
+
+## STAGE.md 쓰는 법
+
+리뷰어가 맨 위 세 칸만 읽고 판단할 수 있어야 한다.
+
+| 칸 | 언제 | 무엇을 |
+|---|---|---|
+| 질문 | 실행 전 | 이 단계가 답하려는 질문 한 문장(첫 문장이 대장에 들어간다), 배경, run별 역할 |
+| 답 | 실행 후 | 질문에 대한 답 한두 줄(첫 문단이 대장에 들어간다) |
+| 근거 | 실행 후 | 숫자 3~5개만. 표 칸: 질문 \| 기준 \| 결과 \| 판정 |
+| 다음 단계 제안 | 실행 후 | 리뷰어가 정할 것과 제안 |
+| 세부 해석 | 선택 | 예상과 달랐던 점, 믿을 수 있는 것과 없는 것 |
 
 ## 흐름
 
 | 순서 | 하는 일 | 명령 |
 |---|---|---|
-| 1 | 단계와 노트 틀 생성 | `python -m <트랙>.exp.stage new <단계-id> --runs <run-id>...` |
-| 2 | `STAGE.md`의 목적, 각 노트의 **왜 돌리나·무엇을 바꿨나** 작성 | (실행 전) |
+| 1 | 단계와 노트 틀 생성 | `python -m <트랙>.exp.stage new <단계-id> --title "제목" --runs <run-id>... --run-titles "제목"...` |
+| 2 | `STAGE.md`의 **질문**, 각 노트의 **왜 돌리나·무엇을 바꿨나** 작성 | (실행 전) |
 | 3 | 러너 실행 — 같은 단계는 병렬 가능 | `python -m <트랙>.exp.run_... --run-id <run-id>` |
-| 4 | 각 노트의 **해석·다음**, `STAGE.md`의 종합 해석·다음 단계 제안 작성 | (실행 후) |
-| 5 | 리뷰 자료 확인 | `python -m <트랙>.exp.stage show <단계-id>` |
+| 4 | 각 노트의 **해석·다음**, `STAGE.md`의 **답·근거·다음 단계 제안** 작성 | (실행 후) |
+| 5 | MLflow·실험 대장에 반영하고 리뷰 자료 확인 | `python -m <트랙>.exp.stage sync <단계-id>` → `show <단계-id>` |
 | 6 | 리뷰어 피드백 기록 | `python -m <트랙>.exp.stage review <단계-id> --verdict approve\|revise --feedback "..."` |
 
 `python -m <트랙>.exp.stage status`로 전체 상태와 지금 무엇이 막고 있는지 본다.
@@ -39,7 +67,7 @@
 - **노트 없는 run은 시작하지 못한다.** "왜 돌리나"·"무엇을 바꿨나"가 비어 있어도 마찬가지다.
 - **시작된 단계가 승인되기 전에는 같은 트랙의 다른 단계 run이 시작되지 않는다.** `revise`는 피드백만
   남기고 단계를 열어 둔다 — 반영한 뒤 다시 리뷰를 받는다. `approve`만 단계를 닫는다.
-- **리뷰를 기록하려면** 모든 run 노트의 해석·다음과 `STAGE.md`의 종합 해석·다음 단계 제안이
+- **리뷰를 기록하려면** 모든 run 노트의 해석·다음과 `STAGE.md`의 답·근거·다음 단계 제안이
   채워져 있어야 하고, 피드백이 비어 있으면 안 된다.
 - **승인된 단계에는 run을 더 넣을 수 없다.** 새 단계를 만든다.
 
@@ -61,7 +89,8 @@
 
 ## MLflow와의 관계
 
-원본은 git에 커밋되는 이 폴더다(MLflow 저장소는 커밋되지 않는다). 러너가 시작할 때 노트가
-MLflow run 설명으로 들어가고, `review`나 `python -m <트랙>.exp.stage sync <단계-id>`를 돌리면 해석과
-리뷰 결과가 반영된다. 태그: `kslab.stage`, `kslab.compares_to`, `note.interpreted`,
-`review.status`(pending/revise/approved), `review.feedback`.
+원본은 git에 커밋되는 이 폴더다(MLflow 저장소는 커밋되지 않는다). MLflow에서 단계는 부모 run,
+그 단계의 run은 자식 run으로 보인다(README의 "화면에서 보이는 구조"). 러너가 시작할 때 run 노트와
+`STAGE.md`가 각 run의 Notes로 들어가고, `review`나 `python -m <트랙>.exp.stage sync <단계-id>`를
+돌리면 해석·제목·리뷰 결과가 반영된다. 태그: `kslab.run_id`, `kslab.stage`, `kslab.compares_to`,
+`note.interpreted`, `review.status`(pending/revise/approved), `review.feedback`.

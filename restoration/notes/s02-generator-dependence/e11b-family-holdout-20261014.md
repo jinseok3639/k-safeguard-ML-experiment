@@ -1,5 +1,6 @@
-# e11b-family-holdout-20261014
+# S02.2 기법군 빼고 학습
 
+- id: `e11b-family-holdout-20261014`
 - 단계: `s02-generator-dependence`
 - 비교 대상: `e8-mlp-bilstm-30k-20261007`
 - 실행 명령: `python -m restoration.exp.run_e11_generator_dependence --run-id e11b-family-holdout-20261014 --part b --no-progress`
