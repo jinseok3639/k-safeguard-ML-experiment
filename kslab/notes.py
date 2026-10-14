@@ -17,6 +17,11 @@
 
 리뷰 기록(`review`)은 **사용자의 말을 그대로** 적는 자리다. 실험을 돌린 쪽이 스스로
 승인하는 용도가 아니다.
+
+이름은 두 겹이다. 기계용 id(`s02-generator-dependence`, `e11b-family-holdout-20261014`)는
+폴더·파일·결과 경로에 쓰고 바꾸지 않는다. 사람이 보는 이름은 `stage.json`의 `title`과
+`titles`에서 만든다 — 단계는 `S02 생성기 의존도`, run은 단계 안 순서대로 `S02.2 기법군 빼고
+학습`. MLflow 화면, 노트 제목, 실험 대장에는 이 이름이 나온다.
 """
 
 from __future__ import annotations
@@ -41,10 +46,14 @@ NEXT = "다음"
 BEFORE_RUN = (WHY, CHANGES)
 AFTER_RUN = (INTERPRETATION, NEXT)
 
-STAGE_PURPOSE = "이 단계의 목적"
-STAGE_SYNTHESIS = "종합 해석"
+# STAGE.md 는 결론이 맨 위에 오는 순서다: 질문 → 답 → 근거 → 다음 → (세부) → 리뷰.
+STAGE_QUESTION = "질문"
+STAGE_ANSWER = "답"
+STAGE_EVIDENCE = "근거"
 STAGE_PROPOSAL = "다음 단계 제안"
+STAGE_DETAIL = "세부 해석"
 STAGE_REVIEWS = "리뷰 기록"
+STAGE_AFTER_RUN = (STAGE_ANSWER, STAGE_EVIDENCE, STAGE_PROPOSAL)
 
 VERDICTS = ("approve", "revise")
 
@@ -52,9 +61,12 @@ _ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 _COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 _HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 _COMPARES_RE = re.compile(r"^-\s*비교 대상\s*:\s*(.*)$", re.MULTILINE)
+_STAGE_NUMBER_RE = re.compile(r"^s(\d+)", re.IGNORECASE)
+_SENTENCE_RE = re.compile(r"^(.+?[.?!])(?:\s|$)")
 
-RUN_TEMPLATE = """# {run_id}
+RUN_TEMPLATE = """# {display}
 
+- id: `{run_id}`
 - 단계: `{stage}`
 - 비교 대상:
 - 실행 명령:
@@ -72,16 +84,24 @@ RUN_TEMPLATE = """# {run_id}
 <!-- 실행 후에 쓴다. 이 결과로 정해진 다음 실험, 그리고 버린 선택지. -->
 """
 
-STAGE_TEMPLATE = """# 단계 {stage}
+STAGE_TEMPLATE = """# {display}
 
-## {purpose}
-<!-- 이 단계의 run들을 묶어서 답하려는 질문. 첫 run 실행 전에 쓴다. -->
+- id: `{stage}`
 
-## {synthesis}
-<!-- 모든 run이 끝난 뒤. run들을 합쳐서 본 결론. -->
+## {question}
+<!-- 실행 전에 쓴다. 이 단계가 답하려는 질문 한두 문장, 배경, 각 run이 맡는 부분. -->
+
+## {answer}
+<!-- 실행 후. 질문에 대한 답 한두 줄. 첫 줄이 실험 대장(EXPERIMENTS.md)에 그대로 들어간다. -->
+
+## {evidence}
+<!-- 실행 후. 답을 받치는 숫자 3~5개만. 표 칸: 질문 | 기준 | 결과 | 판정 -->
 
 ## {proposal}
-<!-- 리뷰어에게 제안하는 다음 단계. 리뷰에서 확정된다. -->
+<!-- 실행 후. 리뷰어가 정할 것과 제안. 리뷰에서 확정된다. -->
+
+## {detail}
+<!-- 선택. 예상과 달랐던 점, 믿을 수 있는 것과 없는 것. -->
 
 ## {reviews}
 """
@@ -151,6 +171,28 @@ class Stage:
         return self.data["runs"]
 
     @property
+    def code(self) -> str:
+        """`s02-...` → `S02`. 번호가 없는 id는 그대로."""
+        match = _STAGE_NUMBER_RE.match(self.stage_id)
+        return f"S{int(match.group(1)):02d}" if match else self.stage_id
+
+    @property
+    def title(self) -> str:
+        return self.data.get("title") or ""
+
+    @property
+    def display_name(self) -> str:
+        return f"{self.code} {self.title}".strip()
+
+    def run_title(self, run_id: str) -> str:
+        return (self.data.get("titles") or {}).get(run_id, "")
+
+    def run_display_name(self, run_id: str) -> str:
+        """`S02.2 기법군 빼고 학습`. 제목이 없으면 run-id를 붙인다."""
+        number = f"{self.code}.{self.runs.index(run_id) + 1}"
+        return f"{number} {self.run_title(run_id) or run_id}"
+
+    @property
     def sealed(self) -> bool:
         return bool(self.data.get("sealed_at"))
 
@@ -213,7 +255,10 @@ def find_run(run_id: str, notes_dir: Path | None = None) -> Stage | None:
     return None
 
 
-def new_stage(stage_id: str, run_ids: list[str], notes_dir: Path | None = None) -> Stage:
+def new_stage(
+    stage_id: str, run_ids: list[str], notes_dir: Path | None = None,
+    title: str = "", run_titles: list[str] | None = None,
+) -> Stage:
     base = Path(notes_dir) if notes_dir else tracks.notes_dir()
     validate_id(stage_id)
     directory = base / stage_id
@@ -225,30 +270,38 @@ def new_stage(stage_id: str, run_ids: list[str], notes_dir: Path | None = None) 
         if owner is not None:
             raise GateError(f"run '{run_id}' 는 이미 단계 '{owner.stage_id}' 에 있습니다.")
     directory.mkdir(parents=True)
+    titles = list(run_titles or [])
+    if titles and len(titles) != len(run_ids):
+        raise GateError("run 제목 수가 run 수와 다릅니다.")
     stage = Stage(directory, {
-        "stage": stage_id, "created_at": _now(), "runs": [],
+        "stage": stage_id, "title": title.strip(), "titles": {},
+        "created_at": _now(), "runs": [],
         "sealed_at": None, "added": [], "reviews": [],
     })
     stage.doc_path().write_text(
         STAGE_TEMPLATE.format(
-            stage=stage_id, purpose=STAGE_PURPOSE, synthesis=STAGE_SYNTHESIS,
-            proposal=STAGE_PROPOSAL, reviews=STAGE_REVIEWS,
+            display=stage.display_name, stage=stage_id, question=STAGE_QUESTION,
+            answer=STAGE_ANSWER, evidence=STAGE_EVIDENCE, proposal=STAGE_PROPOSAL,
+            detail=STAGE_DETAIL, reviews=STAGE_REVIEWS,
         ),
         encoding="utf-8",
     )
-    for run_id in run_ids:
-        _attach(stage, run_id)
+    for index, run_id in enumerate(run_ids):
+        _attach(stage, run_id, titles[index] if titles else "")
     stage.save()
     return stage
 
 
-def _attach(stage: Stage, run_id: str) -> None:
+def _attach(stage: Stage, run_id: str, title: str = "") -> None:
     stage.runs.append(run_id)
+    if title.strip():
+        stage.data.setdefault("titles", {})[run_id] = title.strip()
     path = stage.note_path(run_id)
     if not path.exists():
         path.write_text(
             RUN_TEMPLATE.format(
-                run_id=run_id, stage=stage.stage_id, why=WHY, changes=CHANGES,
+                display=stage.run_display_name(run_id), run_id=run_id,
+                stage=stage.stage_id, why=WHY, changes=CHANGES,
                 interpretation=INTERPRETATION, next=NEXT,
             ),
             encoding="utf-8",
@@ -257,7 +310,7 @@ def _attach(stage: Stage, run_id: str) -> None:
 
 def add_run(
     stage_id: str, run_id: str, reason: str = "",
-    notes_dir: Path | None = None, results_dir: Path | None = None,
+    notes_dir: Path | None = None, results_dir: Path | None = None, title: str = "",
 ) -> Stage:
     """단계에 run을 추가한다. 봉인된 뒤라면 사유와 그 시점에 끝나 있던 run을 남긴다."""
     validate_id(run_id)
@@ -279,9 +332,46 @@ def add_run(
             "run_id": run_id, "at": _now(), "reason": reason.strip(),
             "finished_then": stage.finished(results_dir),
         })
-    _attach(stage, run_id)
+    _attach(stage, run_id, title)
     stage.save()
     return stage
+
+
+def set_title(
+    stage_id: str, title: str, run_id: str | None = None, notes_dir: Path | None = None
+) -> Stage:
+    """사람이 보는 제목을 붙이거나 바꾼다. id·폴더·결과 경로는 그대로다."""
+    stage = get_stage(stage_id, notes_dir)
+    if not title.strip():
+        raise GateError("제목이 비어 있습니다.")
+    if run_id is None:
+        stage.data["title"] = title.strip()
+    else:
+        if run_id not in stage.runs:
+            raise GateError(f"run '{run_id}' 는 단계 '{stage_id}' 에 없습니다.")
+        stage.data.setdefault("titles", {})[run_id] = title.strip()
+    stage.save()
+    return stage
+
+
+def first_line(text: str, sentence: bool = True) -> str:
+    """섹션 본문의 첫 문장(목록 기호·강조 제거). 실험 대장 한 칸에 넣는다.
+
+    문단이 여러 줄로 감겨 있으면 이어 붙인 뒤 첫 문장에서 자른다. sentence=False면 첫 문단 전체.
+    """
+    paragraph: list[str] = []
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            if paragraph:
+                break
+            continue
+        if paragraph and line[:1] in "-*>|":
+            break
+        paragraph.append(line.lstrip("-*> ").strip())
+    joined = " ".join(paragraph).replace("**", "").replace("|", "/")
+    match = _SENTENCE_RE.match(joined) if sentence else None
+    return match.group(1) if match else joined
 
 
 @dataclass
@@ -293,6 +383,9 @@ class StartTicket:
     note_path: Path
     compares_to: str
     prereg_sha256: str
+    run_display_name: str = ""
+    stage_display_name: str = ""
+    stage_note: str = ""
 
 
 def check_start(
@@ -317,8 +410,9 @@ def check_start(
             f"{path} 의 다음 칸이 비어 있습니다: {', '.join(empty)}\n"
             "실행 전에 쓰는 칸입니다. 채운 뒤 다시 실행하세요."
         )
-    if not sections(stage.doc_path().read_text(encoding="utf-8")).get(STAGE_PURPOSE):
-        raise GateError(f"{stage.doc_path()} 의 '{STAGE_PURPOSE}' 가 비어 있습니다.")
+    stage_doc = stage.doc_path().read_text(encoding="utf-8")
+    if not sections(stage_doc).get(STAGE_QUESTION):
+        raise GateError(f"{stage.doc_path()} 의 '{STAGE_QUESTION}' 이 비어 있습니다.")
     if stage.approved:
         raise GateError(
             f"단계 '{stage.stage_id}' 는 이미 승인되어 닫혔습니다. 새 단계를 만드세요."
@@ -339,7 +433,8 @@ def check_start(
         stage.data["sealed_at"] = _now()
         stage.save()
     return StartTicket(
-        stage.stage_id, text, path, compares_to(text), prereg_digest(text)
+        stage.stage_id, text, path, compares_to(text), prereg_digest(text),
+        stage.run_display_name(run_id), stage.display_name, stage_doc,
     )
 
 
@@ -359,9 +454,9 @@ def review_blockers(stage: Stage, results_dir: Path | None = None) -> list[str]:
             # 끝나지 않은 run도 리뷰는 받을 수 있다(포기·실패). 다만 노트에 그 사정이 적혀야 한다.
             pass
     doc = sections(stage.doc_path().read_text(encoding="utf-8"))
-    for name in (STAGE_SYNTHESIS, STAGE_PROPOSAL):
+    for name in STAGE_AFTER_RUN:
         if not doc.get(name):
-            problems.append(f"{STAGE_DOC}: '{name}' 가 비어 있습니다.")
+            problems.append(f"{STAGE_DOC}: '{name}' 칸이 비어 있습니다.")
     return problems
 
 

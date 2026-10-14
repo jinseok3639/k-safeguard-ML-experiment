@@ -1,4 +1,4 @@
-"""자모 임베딩 + MLP 슬롯 복원기 (torch, CPU 전용).
+"""자모 임베딩 + MLP 슬롯 복원기 (torch). 기본은 CPU, `device`로 GPU를 쓴다.
 
 선형 모델과 같은 인터페이스(`fit` / `predict_slots` / `restore_many`)를 지켜서 E2에서
 그대로 바꿔 끼울 수 있게 했다.
@@ -22,6 +22,7 @@ import numpy as np
 
 from .. import features as F
 from .. import tracking
+from . import device as _device
 from ..jamo import N_CHO, N_JONG, N_JUNG, join
 
 _SLOT_SIZES = (N_CHO, N_JUNG, N_JONG)
@@ -92,6 +93,8 @@ class MlpSlotRestorer:
     weight_decay: float = 1e-2
     random_state: int = 2026
     threads: int | None = None
+    # "cpu" | "cuda" | "auto". 기본 CPU — kslab/models/device.py 참고.
+    device: str = "cpu"
     vocab: F.CharVocab = field(default_factory=F.CharVocab)
     net: object | None = None
     _fit_log: list = field(default_factory=list)
@@ -122,9 +125,10 @@ class MlpSlotRestorer:
         targets = {slot: F.targets_array(examples, slot) for slot in self.unknown_slots}
 
         width = chars.shape[1]
+        dev = _device.resolve(self.device)
         self.net = _SlotNet(
             len(self.vocab), width, self.embed_dim, self.hidden, self.unknown_slots, self.dropout
-        )
+        ).to(dev)
         optimizer = torch.optim.AdamW(
             self.net.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
@@ -148,10 +152,11 @@ class MlpSlotRestorer:
                 if len(idx) < 2:
                     continue  # BatchNorm은 배치 1을 못 받는다
                 logits = self.net(
-                    tensors["chars"][idx], tensors["pos"][idx], tensors["slots"][idx]
+                    tensors["chars"][idx].to(dev), tensors["pos"][idx].to(dev),
+                    tensors["slots"][idx].to(dev),
                 )
                 loss = sum(
-                    loss_fn(logits[slot], target_tensors[slot][idx])
+                    loss_fn(logits[slot], target_tensors[slot][idx].to(dev))
                     for slot in self.unknown_slots
                 )
                 optimizer.zero_grad()
@@ -177,16 +182,17 @@ class MlpSlotRestorer:
         torch = _torch()
         chars, pos, slots = self._arrays(examples)
         result: dict[int, np.ndarray] = {}
+        dev = next(self.net.parameters()).device
         with torch.no_grad():
             for start in range(0, len(examples), 4096):
                 stop = start + 4096
                 logits = self.net(
-                    torch.from_numpy(chars[start:stop]),
-                    torch.from_numpy(pos[start:stop]),
-                    torch.from_numpy(slots[start:stop]),
+                    torch.from_numpy(chars[start:stop]).to(dev),
+                    torch.from_numpy(pos[start:stop]).to(dev),
+                    torch.from_numpy(slots[start:stop]).to(dev),
                 )
                 for slot, value in logits.items():
-                    chunk = torch.softmax(value, dim=1).numpy()
+                    chunk = torch.softmax(value, dim=1).cpu().numpy()
                     result[slot] = (
                         chunk if slot not in result else np.vstack([result[slot], chunk])
                     )

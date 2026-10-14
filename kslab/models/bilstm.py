@@ -1,4 +1,4 @@
-"""소형 양방향 LSTM 슬롯 복원기 (torch, CPU 전용).
+"""소형 양방향 LSTM 슬롯 복원기 (torch). 기본은 CPU, `device`로 GPU를 쓴다.
 
 MLP와 결정적으로 다른 점: MLP는 고정 폭 문자 창(+-4자)만 보지만 BiLSTM은 **문장 전체**를
 양방향으로 읽는다. 연음처럼 받침이 어디로 넘어갔는지 알려면 인접 음절 너머의 문맥이
@@ -22,6 +22,7 @@ from tqdm.auto import tqdm
 
 from .. import features as F
 from .. import tracking
+from . import device as _device
 from ..jamo import CHO_INDEX, N_CHO, N_JONG, N_JUNG, is_syllable, join, split
 
 _SLOT_SIZES = (N_CHO, N_JUNG, N_JONG)
@@ -93,6 +94,8 @@ class BiLstmSlotRestorer:
     weight_decay: float = 1e-2
     random_state: int = 2026
     threads: int | None = None
+    # "cpu" | "cuda" | "auto". 기본 CPU — kslab/models/device.py 참고.
+    device: str = "cpu"
     vocab: F.CharVocab = field(default_factory=F.CharVocab)
     net: object | None = None
     _fit_log: list = field(default_factory=list)
@@ -180,10 +183,11 @@ class BiLstmSlotRestorer:
         tokens = torch.from_numpy(self._encode(obfuscated))
         targets = {s: torch.from_numpy(v) for s, v in self._targets(obfuscated, clean).items()}
 
+        dev = _device.resolve(self.device)
         self.net = _BiLstmNet(
             len(self.vocab), self.embed_dim, self.hidden, self.layers,
             self.unknown_slots, self.dropout,
-        )
+        ).to(dev)
         optimizer = torch.optim.AdamW(
             self.net.parameters(), lr=self.lr, weight_decay=self.weight_decay
         )
@@ -220,6 +224,9 @@ class BiLstmSlotRestorer:
                 # "처음부터 다시"로 되돌려놨으므로, 저장해 둔 전역 상태로 다시 덮어써야
                 # 재개 이후 배치들의 드롭아웃 마스크가 크래시 없이 이어 돈 것과 같아진다.
                 torch.set_rng_state(checkpoint["torch_rng_state"])
+                # GPU에서는 드롭아웃이 CUDA RNG를 쓴다. 같은 이유로 그것도 되돌린다.
+                if dev.type == "cuda" and checkpoint.get("cuda_rng_state") is not None:
+                    torch.cuda.set_rng_state(checkpoint["cuda_rng_state"], dev)
                 print(
                     f"[bilstm:{self.technique}] 체크포인트에서 재개: "
                     f"epoch {start_epoch + 1}/{self.epochs}, batch {resume_batch}",
@@ -236,6 +243,9 @@ class BiLstmSlotRestorer:
                     "signature": signature, "epoch": epoch, "batch": batch,
                     "order": order_tensor, "generator_state": generator.get_state(),
                     "torch_rng_state": torch.get_rng_state(),
+                    "cuda_rng_state": (
+                        torch.cuda.get_rng_state(dev) if dev.type == "cuda" else None
+                    ),
                     "model_state": self.net.state_dict(),
                     "optimizer_state": optimizer.state_dict(), "fit_log": self._fit_log,
                 },
@@ -264,11 +274,11 @@ class BiLstmSlotRestorer:
                 )
             for start in batch_iter:
                 idx = order[start : start + self.batch_size]
-                logits = self.net(tokens[idx])
+                logits = self.net(tokens[idx].to(dev))
                 loss = sum(
                     loss_fn(
                         logits[slot].reshape(-1, _SLOT_SIZES[slot]),
-                        targets[slot][idx].reshape(-1),
+                        targets[slot][idx].to(dev).reshape(-1),
                     )
                     for slot in self.unknown_slots
                 )
@@ -296,12 +306,13 @@ class BiLstmSlotRestorer:
     def _forward(self, texts: Sequence[str]) -> dict[int, np.ndarray]:
         torch = _torch()
         tokens = torch.from_numpy(self._encode(texts))
+        dev = next(self.net.parameters()).device
         chunks: dict[int, list] = {slot: [] for slot in self.unknown_slots}
         with torch.no_grad():
             for start in range(0, len(texts), 128):
-                logits = self.net(tokens[start : start + 128])
+                logits = self.net(tokens[start : start + 128].to(dev))
                 for slot, value in logits.items():
-                    chunks[slot].append(torch.softmax(value, dim=-1).numpy())
+                    chunks[slot].append(torch.softmax(value, dim=-1).cpu().numpy())
         return {slot: np.concatenate(parts, axis=0) for slot, parts in chunks.items()}
 
     def restore_many(

@@ -64,7 +64,7 @@ class TrackTest(unittest.TestCase):
         """복원기 단계가 리뷰를 기다려도 가드레일 단계는 시작된다."""
         def ready_stage(track: str, stage_id: str, run_id: str) -> N.Stage:
             stage = N.new_stage(stage_id, [run_id], T.notes_dir(track))
-            _fill(stage.doc_path(), (N.STAGE_PURPOSE,))
+            _fill(stage.doc_path(), (N.STAGE_QUESTION,))
             _fill(stage.note_path(run_id), N.BEFORE_RUN)
             return stage
 

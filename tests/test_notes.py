@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import shutil
 import sys
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -24,7 +26,7 @@ def _fill(path: Path, names: tuple[str, ...], body: str = "내용") -> None:
 class SectionTest(unittest.TestCase):
     def test_template_comments_do_not_count_as_content(self):
         text = N.RUN_TEMPLATE.format(
-            run_id="r", stage="s", why=N.WHY, changes=N.CHANGES,
+            display="S01.1 r", run_id="r", stage="s", why=N.WHY, changes=N.CHANGES,
             interpretation=N.INTERPRETATION, next=N.NEXT,
         )
         self.assertEqual(N.missing(text, N.BEFORE_RUN + N.AFTER_RUN),
@@ -40,8 +42,16 @@ class SectionTest(unittest.TestCase):
         self.assertNotEqual(N.prereg_digest(text), N.prereg_digest(rewritten))
 
 
+def _no_mlflow(case: unittest.TestCase) -> None:
+    """이 테스트들은 기록 저장소를 보지 않는다. 실제 data/mlflow 에 쓰지 않게 끈다."""
+    patch = mock.patch.dict(os.environ, {"KSLAB_MLFLOW": "0"})
+    patch.start()
+    case.addCleanup(patch.stop)
+
+
 class GateTest(unittest.TestCase):
     def setUp(self):
+        _no_mlflow(self)
         self.tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
         self.notes = self.tmp / "notes"
@@ -50,7 +60,7 @@ class GateTest(unittest.TestCase):
     def _stage(self, stage_id: str, runs: list[str], ready: bool = True) -> N.Stage:
         stage = N.new_stage(stage_id, runs, self.notes)
         if ready:
-            _fill(stage.doc_path(), (N.STAGE_PURPOSE,))
+            _fill(stage.doc_path(), (N.STAGE_QUESTION,))
             for run_id in runs:
                 _fill(stage.note_path(run_id), N.BEFORE_RUN)
         return stage
@@ -63,7 +73,7 @@ class GateTest(unittest.TestCase):
         stage = N.get_stage(stage_id, self.notes)
         for run_id in stage.runs:
             _fill(stage.note_path(run_id), N.AFTER_RUN)
-        _fill(stage.doc_path(), (N.STAGE_SYNTHESIS, N.STAGE_PROPOSAL))
+        _fill(stage.doc_path(), N.STAGE_AFTER_RUN)
 
     def test_run_without_note_is_refused(self):
         with self.assertRaises(N.GateError):
@@ -152,10 +162,53 @@ class GateTest(unittest.TestCase):
             N.new_stage("s2", ["a"], self.notes)
 
 
+class NamingTest(unittest.TestCase):
+    """기계용 id와 사람이 보는 이름."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def test_display_names_follow_stage_order(self):
+        stage = N.new_stage("s03-per-slot", ["s03.1-sweep", "s03.2-kotox"], self.tmp,
+                            title="기법별 임계값", run_titles=["임계값 스윕", "KOTOX 재평가"])
+        self.assertEqual(stage.display_name, "S03 기법별 임계값")
+        self.assertEqual(stage.run_display_name("s03.2-kotox"), "S03.2 KOTOX 재평가")
+        note = stage.note_path("s03.1-sweep").read_text(encoding="utf-8")
+        self.assertTrue(note.startswith("# S03.1 임계값 스윕\n"))
+        self.assertIn("- id: `s03.1-sweep`", note)
+        self.assertTrue(stage.doc_path().read_text(encoding="utf-8").startswith("# S03 기법별 임계값"))
+
+    def test_untitled_run_falls_back_to_id_and_titles_can_change(self):
+        N.new_stage("s04-x", ["r1"], self.tmp, title="제목")
+        stage = N.add_run("s04-x", "r2", notes_dir=self.tmp, title="두 번째")
+        self.assertEqual(stage.run_display_name("r1"), "S04.1 r1")
+        self.assertEqual(stage.run_display_name("r2"), "S04.2 두 번째")
+        stage = N.set_title("s04-x", "바뀐 제목", "r1", self.tmp)
+        self.assertEqual(stage.run_display_name("r1"), "S04.1 바뀐 제목")
+        with self.assertRaises(N.GateError):
+            N.set_title("s04-x", "x", "nope", self.tmp)
+
+    def test_first_line_joins_wrapped_paragraph(self):
+        body = "복원기가 묶여\n있나? 배경 설명.\n\n- 목록"
+        self.assertEqual(N.first_line(body), "복원기가 묶여 있나?")
+        self.assertEqual(N.first_line("**답** 첫째. 둘째.", sentence=False), "답 첫째. 둘째.")
+
+    def test_ledger_table_has_one_row_per_stage(self):
+        from kslab import stage_cli as S
+
+        stage = N.new_stage("s05-y", ["r"], self.tmp, title="표 확인")
+        _fill(stage.doc_path(), (N.STAGE_QUESTION,), "질문인가? 배경.")
+        _fill(stage.doc_path(), (N.STAGE_ANSWER,), "그렇다.")
+        table = S.ledger_table(N.load_stages(self.tmp))
+        self.assertIn("| **S05 표 확인** | 질문인가? | 그렇다. | 계획됨(미시작) |", table)
+
+
 class RunExtrasTest(unittest.TestCase):
     """게이트와 무관하게 모든 run에 남는 것."""
 
     def setUp(self):
+        _no_mlflow(self)
         self.tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
 

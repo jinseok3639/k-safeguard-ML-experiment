@@ -18,3 +18,7 @@ results/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# mlflow ui 서버가 클라이언트 업로드 artifact를 기본으로 cwd에 쓴다(README의 실행 명령은 data/ 로 돌린다)
+mlartifacts/
+mlruns/
