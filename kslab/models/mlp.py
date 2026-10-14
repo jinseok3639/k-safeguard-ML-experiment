@@ -21,6 +21,7 @@ from typing import Sequence
 import numpy as np
 
 from .. import features as F
+from .. import tracking
 from ..jamo import N_CHO, N_JONG, N_JUNG, join
 
 _SLOT_SIZES = (N_CHO, N_JUNG, N_JONG)
@@ -115,6 +116,7 @@ class MlpSlotRestorer:
         if not self.unknown_slots:
             raise ValueError(f"{self.technique}에는 예측할 슬롯이 없습니다.")
 
+        fit_log = tracking.begin_fit("mlp", self, n_examples=len(examples))
         self.vocab.fit(examples).freeze()
         chars, pos, slots = self._arrays(examples)
         targets = {slot: F.targets_array(examples, slot) for slot in self.unknown_slots}
@@ -158,6 +160,7 @@ class MlpSlotRestorer:
                 total += float(loss)
                 batches += 1
             self._fit_log.append(round(total / max(batches, 1), 4))
+            fit_log.epoch(epoch + 1, self._fit_log[-1])
         self.net.eval()
         return self
 
