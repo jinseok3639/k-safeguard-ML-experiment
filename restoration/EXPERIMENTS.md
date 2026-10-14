@@ -12,7 +12,7 @@
 | 단계 | 질문 | 답 | 상태 | 문서 |
 |---|---|---|---|---|
 | **S01 BiLSTM vs MLP (포기 임계값)** | 단일 난독화 기법(tensify·liaison·jongseong_cram)에서 abstention을 건 상태로 BiLSTM이 MLP보다 나은가? | 연음·받침 크래밍은 BiLSTM이 확실히 낫다. 된소리는 판정할 수 없다(임계값 격자·benign 표본이 성김). | 승인됨 | [S01](./notes/s01-e8b-bilstm-abstention/STAGE.md) |
-| **S02 생성기 의존도** | 복원기가 우리 난독화 생성기(`kslab/obfuscate.py`)에 묶여 있나? | 그렇다 — 복원기는 우리 생성기 패턴을 외운 것이고, 남은 성능도 기법 공통 임계값 하나가 깎아 먹는다. | 리뷰 대기 | [S02](./notes/s02-generator-dependence/STAGE.md) |
+| **S02 생성기 의존도** | 복원기가 우리 난독화 생성기(`kslab/obfuscate.py`)에 묶여 있나? | 그렇다 — 복원기는 우리 생성기 패턴을 외운 것이고, 남은 성능도 기법 공통 임계값 하나가 깎아 먹는다. | 승인됨 | [S02](./notes/s02-generator-dependence/STAGE.md) |
 <!-- stages:end -->
 
 ## run 기록

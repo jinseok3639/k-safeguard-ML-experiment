@@ -9,7 +9,20 @@
   ],
   "sealed_at": "2026-10-14T04:58:12Z",
   "added": [],
-  "reviews": [],
+  "reviews": [
+    {
+      "at": "2026-10-14T13:40:37Z",
+      "verdict": "approve",
+      "feedback": "일단 S02는 승인함.",
+      "runs_reviewed": [
+        "e11a-data-audit-20261014",
+        "e11b-family-holdout-20261014",
+        "e11c-cross-generator-20261014",
+        "e11d-oracle-detector-20261014"
+      ],
+      "unfinished": []
+    }
+  ],
   "title": "생성기 의존도",
   "titles": {
     "e11a-data-audit-20261014": "KOTOX 평가 데이터 감사",
