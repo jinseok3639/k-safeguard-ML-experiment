@@ -1,0 +1,13 @@
+{
+  "stage": "s02-generator-dependence",
+  "created_at": "2026-10-14T04:56:58Z",
+  "runs": [
+    "e11a-data-audit-20261014",
+    "e11b-family-holdout-20261014",
+    "e11c-cross-generator-20261014",
+    "e11d-oracle-detector-20261014"
+  ],
+  "sealed_at": null,
+  "added": [],
+  "reviews": []
+}

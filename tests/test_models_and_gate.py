@@ -349,3 +349,75 @@ class TestBilstmCheckpoint(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+def _cuda_available() -> bool:
+    try:
+        import torch
+    except ImportError:
+        return False
+    return torch.cuda.is_available()
+
+
+class TestDevice(unittest.TestCase):
+    """GPU 학습·추론. CUDA가 없는 머신에서는 건너뛴다."""
+
+    @classmethod
+    def setUpClass(cls):
+        items = P.seeds_as_items(P.load_seeds())[:40]
+        cls.pairs = P.make_pairs(items, ["liaison"], (1.0,), gen_seed=1, include_identity=True)
+        cls.texts = [p.obfuscated for p in cls.pairs[:12]]
+
+    def test_default_device_is_cpu(self):
+        from kslab.models.mlp import MlpSlotRestorer
+
+        self.assertEqual(BiLstmSlotRestorer("liaison").device, "cpu")
+        self.assertEqual(MlpSlotRestorer("liaison").device, "cpu")
+
+    def test_unknown_gpu_request_fails_loudly(self):
+        from kslab.models import device as D
+
+        if _cuda_available():
+            self.skipTest("CUDA가 있는 머신")
+        with self.assertRaises(RuntimeError):
+            D.resolve("cuda")
+
+    @unittest.skipUnless(_cuda_available(), "CUDA 없음")
+    def test_bilstm_trains_and_restores_on_gpu(self):
+        model = BiLstmSlotRestorer(
+            "liaison", max_len=48, embed_dim=16, hidden=8, layers=1,
+            epochs=1, batch_size=8, random_state=42, device="cuda",
+        ).fit(self.pairs, show_progress=False)
+        self.assertEqual(next(model.net.parameters()).device.type, "cuda")
+        restored = model.restore_many(self.texts)
+        self.assertEqual([len(r[0]) for r in restored], [len(t) for t in self.texts])
+
+    @unittest.skipUnless(_cuda_available(), "CUDA 없음")
+    def test_bilstm_gpu_checkpoint_resumes(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ckpt.pt"
+            kwargs = dict(max_len=48, embed_dim=16, hidden=8, layers=1, epochs=2,
+                          batch_size=8, random_state=42, device="cuda")
+            first = BiLstmSlotRestorer("liaison", **kwargs).fit(
+                self.pairs, checkpoint_path=path, show_progress=False
+            )
+            # 완주한 체크포인트에서 다시 시작하면 학습 없이 같은 가중치를 불러온다.
+            again = BiLstmSlotRestorer("liaison", **kwargs).fit(
+                self.pairs, checkpoint_path=path, show_progress=False
+            )
+            import torch
+
+            sa, sb = first.net.state_dict(), again.net.state_dict()
+            self.assertTrue(all(torch.equal(sa[k], sb[k]) for k in sa))
+
+    @unittest.skipUnless(_cuda_available(), "CUDA 없음")
+    def test_mlp_trains_and_restores_on_gpu(self):
+        from kslab.models.mlp import MlpSlotRestorer
+
+        examples = F.extract_examples(self.pairs, window=2)
+        model = MlpSlotRestorer("liaison", window=2, epochs=1, device="cuda").fit(examples)
+        self.assertEqual(next(model.net.parameters()).device.type, "cuda")
+        restored = model.restore_many(self.texts)
+        self.assertEqual([len(r[0]) for r in restored], [len(t) for t in self.texts])
