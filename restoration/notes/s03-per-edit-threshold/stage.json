@@ -1,0 +1,14 @@
+{
+  "stage": "s03-per-edit-threshold",
+  "title": "편집 종류별 임계값",
+  "titles": {
+    "s03.1-per-edit-threshold": "편집 종류별 임계값 배분"
+  },
+  "created_at": "2026-10-14T15:15:40Z",
+  "runs": [
+    "s03.1-per-edit-threshold"
+  ],
+  "sealed_at": null,
+  "added": [],
+  "reviews": []
+}
