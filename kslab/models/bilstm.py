@@ -21,6 +21,7 @@ import numpy as np
 from tqdm.auto import tqdm
 
 from .. import features as F
+from .. import tracking
 from ..jamo import CHO_INDEX, N_CHO, N_JONG, N_JUNG, is_syllable, join, split
 
 _SLOT_SIZES = (N_CHO, N_JUNG, N_JONG)
@@ -173,6 +174,7 @@ class BiLstmSlotRestorer:
         clean = [p.clean for p in pairs]
         if not obfuscated:
             raise ValueError("학습 페어가 비었습니다.")
+        fit_log = tracking.begin_fit("bilstm", self, n_pairs=len(obfuscated))
         self._fit_vocab(obfuscated + clean)
 
         tokens = torch.from_numpy(self._encode(obfuscated))
@@ -283,6 +285,7 @@ class BiLstmSlotRestorer:
             # 재개한 에폭은 크래시 이전 배치의 손실을 못 들고 와서 이 평균이 그 에폭
             # 전체가 아니라 재개 이후분만 반영한다 — 학습 자체(가중치 갱신)는 전부 반영됨.
             self._fit_log.append(round(total / max(batches, 1), 4))
+            fit_log.epoch(epoch + 1, self._fit_log[-1])
             if show_progress:
                 epochs_iter.set_postfix(avg_loss=self._fit_log[-1])
             order, resume_batch = None, 0

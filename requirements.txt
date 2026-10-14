@@ -1,5 +1,7 @@
-# CPU 전용. GPU 없음(Intel UHD), torch는 CPU 휠 인덱스에서 받는다.
-#   pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+# torch 휠은 머신에 맞는 인덱스에서 받는다.
+#   GPU 없음:        pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+#   NVIDIA(CUDA 12): pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu128
+# WSL2에서는 nvidia-smi 가 PATH에 없을 수 있다 — /usr/lib/wsl/lib/nvidia-smi 로 확인한다.
 numpy==2.3.5
 scipy==1.16.3
 scikit-learn==1.7.2
@@ -10,3 +12,4 @@ onnxruntime==1.28.0
 torch==2.9.1
 onnx==1.22.0
 tqdm==4.70.0
+mlflow==3.16.1

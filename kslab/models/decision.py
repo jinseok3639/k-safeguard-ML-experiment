@@ -21,6 +21,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 
 from .. import features as F
+from .. import tracking
 from ..jamo import (
     CHO_INDEX,
     COMPAT_CHO,
@@ -119,6 +120,7 @@ class TensifyDecider:
             for example in F.extract_examples([pair], self.window):
                 examples.append(example)
                 labels.append(REVERT if example.changed else KEEP)
+        tracking.begin_fit("tensify_decider", self, n_examples=len(examples))
         if not examples:
             raise ValueError("학습 예제가 비었습니다.")
 

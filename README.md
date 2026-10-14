@@ -15,6 +15,9 @@ k-safeguard의 "규칙으로 답이 안 나오는 난독화 케이스에 ML을 �
   판단한다. 실제 NRR·ΔFPR이 필요하면 `notebooks/colab_kanana_guardrail_eval.ipynb`로
   Colab에서 돌리고 결과 zip을 다시 `results/`에 반영한다(E10 선례).
 - **후보만 만들고 판단하지 않는다.** block/allow를 반환하는 코드는 이 폴더에 두지 않는다.
+- **노트 없이 실행하지 않고, 리뷰 없이 다음 단계로 가지 않는다.** 스모크가 아닌 run은
+  `notes/`에 실행 이유가 적혀 있어야 시작하고, 시작된 단계가 승인되기 전에는 다른 단계의
+  run이 시작되지 않는다. [`notes/README.md`](./notes/README.md) 참고.
 
 ## 시작하기
 
@@ -28,6 +31,41 @@ python -m exp.run_e0_baseline_reproduce --run-id e0-<날짜>
 ```
 
 bash를 쓴다면 `source ./env.sh`가 같은 일을 한다.
+
+## 실험 기록 (MLflow)
+
+`env.sh`/`env.ps1`을 거치면 러너가 끝날 때마다 MLflow에도 기록된다. 러너를 고칠 필요는
+없다 — `kslab/record.py`의 `Run.start()`/`Run.finish()`가 `kslab/tracking.py`를 부른다.
+
+```bash
+source ./env.sh
+mlflow ui --port 5000        # http://127.0.0.1:5000
+```
+
+| MLflow | 내용 |
+|---|---|
+| experiment / run name | 러너의 experiment 이름 / run-id. 스모크 실행은 `_smoke` experiment |
+| description | 러너 모듈 docstring(실험 목적) |
+| params | `config` |
+| metrics | `finish(metrics)`의 수치를 `sweeps/tensify/bilstm/...` 식 키로 평탄화 |
+| tags | 판정(`status`), git 커밋·dirty, 실행 명령, 호스트, 패키지 버전 |
+| datasets | `add_input()`으로 등록한 입력의 이름·SHA-256·경로 (내용은 싣지 않음) |
+| params (`fit.*`) | 모델이 `fit()`에서 스스로 올리는 하이퍼파라미터·학습 표본 수 — 러너에 하드코딩된 값도 잡힌다 |
+| metrics (`headline/*`) | 러너가 고른 대표 지표. run끼리 비교할 때는 이것만 보면 된다 (`finish(metrics, headline=...)`) |
+| metrics (`train/*/loss`) | epoch별 학습 loss (MLP·BiLSTM) |
+| artifacts | `results/<run-id>/`의 `.md`·`.json`(report, metrics, manifest, 시작 시점 노트)와 `code.diff`(미커밋 변경 전체)·`pip-freeze.txt` |
+| 노트·리뷰 | run 설명 = `notes/`의 노트. 태그 `kslab.stage`·`kslab.compares_to`·`review.status`·`review.feedback` |
+
+- 저장소는 `data/mlflow/`(sqlite + artifacts)이고 커밋되지 않는다. 원본은 여전히
+  `results/<run-id>/`이며 MLflow 기록이 실패해도 실험은 멈추지 않는다.
+- `predictions.jsonl`처럼 공격 원문이 든 산출물은 MLflow에 올리지 않는다.
+- 러너의 stdout은 `results/<run-id>/run.log`에 남는다. 러너가 원문 예시를 찍는 경우가 있어
+  MLflow에는 올리지 않는다.
+- 대표 지표(`headline`)는 지금 E8 러너에만 있다. 새 러너는 `finish()`에 직접 넘긴다.
+- 러너가 `finish()` 전에 죽거나 중단되면 그 run은 `FAILED`로 남는다.
+- MLflow 도입 전 실험(E0~E10)은 `python -m exp.backfill_mlflow`로 `baselines/*.json`에서
+  수치만 옮겼다(`kslab.backfilled=true`). 다른 머신에서 새로 받았을 때도 이걸 한 번 돌리면 된다.
+- 기록을 끄려면 `KSLAB_MLFLOW=0`.
 
 ## 실행 환경
 
@@ -49,6 +87,9 @@ GPU 없음(Intel UHD) · 12코어 · RAM 15.7GB · C: 여유 21GB. torch는 CPU 
 | `kslab/models/` | linear(로지스틱) → mlp → bilstm 사다리 |
 | `kslab/metrics.py` | proxy 지표 + seed-cluster bootstrap (저장소 구현 이식) + 자리 단위 4분류 |
 | `kslab/record.py` | run manifest, 경로 격리 검사, baseline 발행 |
+| `kslab/tracking.py` | MLflow 기록(`record.Run`이 호출) |
+| `kslab/notes.py`, `exp/stage.py` | 실험 노트와 단계 리뷰 게이트 |
+| `notes/` | 커밋 대상 — 단계별 실험 이유·해석·리뷰 기록 |
 | `exp/run_e*.py` | 실험 러너 |
 | `baselines/`, `reports/` | 커밋 대상 — 집계 JSON과 보고서 |
 | `results/`, `data/` | 커밋 제외 — 원문·코퍼스·체크포인트 |

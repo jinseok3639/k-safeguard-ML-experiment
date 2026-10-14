@@ -19,8 +19,14 @@ $env:TORCH_HOME         = Join-Path $Root "data\torch-home"
 $env:TOKENIZERS_PARALLELISM = "false"
 $env:HF_HUB_DISABLE_SYMLINKS_WARNING = "1"
 $env:PYTHONHASHSEED     = "0"
+# MLflow 기록도 폴더 안에만. artifact 위치는 kslab/tracking.py 가 data\mlflow\artifacts 로 잡는다.
+$MlflowDir = Join-Path $Root "data\mlflow"
+$env:MLFLOW_TRACKING_URI = "sqlite:///" + ((Join-Path $MlflowDir "mlflow.db") -replace "\\", "/")
+# `mlflow ui` 서버는 TRACKING_URI 가 아니라 이 값을 본다. 없으면 cwd에 빈 mlflow.db 를 새로 만든다.
+$env:MLFLOW_BACKEND_STORE_URI = $env:MLFLOW_TRACKING_URI
+$env:MLFLOW_DISABLE_AGENT_HINT = "1"
 
-foreach ($d in @($env:HF_HOME, $env:HF_HUB_CACHE, $env:HF_DATASETS_CACHE, $env:TORCH_HOME)) {
+foreach ($d in @($env:HF_HOME, $env:HF_HUB_CACHE, $env:HF_DATASETS_CACHE, $env:TORCH_HOME, $MlflowDir)) {
     if (-not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }
 }
 

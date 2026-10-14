@@ -16,6 +16,7 @@ import numpy as np
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 
 from .. import features as F
+from .. import tracking
 from ..jamo import N_CHO, N_JONG, N_JUNG, compose, decompose, is_syllable, split
 
 _SLOT_SIZES = (N_CHO, N_JUNG, N_JONG)
@@ -60,6 +61,7 @@ class SlotRestorer:
     def fit(self, examples: Sequence[F.SlotExample]) -> "SlotRestorer":
         if not examples:
             raise ValueError("학습 예제가 비었습니다.")
+        tracking.begin_fit("linear", self, n_examples=len(examples))
         self.vocab.fit(examples).freeze()
         matrix = F.char_window_matrix(examples, self.vocab)
         for slot in self.unknown_slots:
