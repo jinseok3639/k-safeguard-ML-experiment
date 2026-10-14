@@ -117,6 +117,9 @@ class RunIntegrationTest(unittest.TestCase):
         fit = T.begin_fit("mlp", SimpleNamespace(technique="tensify", hidden=64))
         fit.epoch(1, 0.9)
         fit.epoch(2, 0.4)
+        # 합집합 기법 이름의 '+'는 MLflow 키에 못 쓴다 — 정리돼서 기록돼야 한다.
+        union = T.begin_fit("bilstm", SimpleNamespace(technique="liaison+tensify", hidden=8))
+        union.epoch(1, 0.5)
         run.finish(
             {"status": "PROMOTE_CANDIDATE", "sweeps": {"tensify": {"cer": 0.25}}},
             headline={"tensify": {"best": 0.25}},
@@ -132,6 +135,9 @@ class RunIntegrationTest(unittest.TestCase):
         self.assertEqual(logged.data.params["fit.mlp/tensify.hidden"], "64")
         history = client.get_metric_history(logged.info.run_id, "train/mlp/tensify/loss")
         self.assertEqual([(m.step, m.value) for m in history], [(1, 0.9), (2, 0.4)])
+        self.assertEqual(logged.data.params["fit.bilstm/liaison_tensify.hidden"], "8")
+        union_history = client.get_metric_history(logged.info.run_id, "train/bilstm/liaison_tensify/loss")
+        self.assertEqual([(m.step, m.value) for m in union_history], [(1, 0.5)])
         self.assertEqual(logged.data.tags["kslab.experiment"], "E_unit")
         self.assertEqual(
             [d.dataset.name for d in logged.inputs.dataset_inputs], ["seeds"]

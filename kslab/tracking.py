@@ -205,7 +205,9 @@ def begin_fit(kind: str, model: Any, **extra: Any) -> FitLog:
     같은 (종류, 기법)을 한 run에서 여러 번 학습하면(코퍼스 크기 스윕 등) `.2`, `.3`이 붙는다.
     MLflow가 꺼져 있어도 기록은 쌓이고 `fits()`로 manifest에 들어간다.
     """
-    base = f"{kind}/{getattr(model, 'technique', None) or 'all'}"
+    # 합집합 기법 이름(`liaison+tensify`)의 `+`는 MLflow 키에 못 쓴다. 이름 부분만 정리한다.
+    technique = _INVALID_KEY_CHARS.sub("_", str(getattr(model, "technique", None) or "all"))
+    base = f"{kind}/{technique}"
     count = sum(1 for fit in _FITS if fit["base"] == base) + 1
     key = base if count == 1 else f"{base}.{count}"
     hyper = {
