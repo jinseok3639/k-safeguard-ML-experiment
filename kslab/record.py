@@ -22,12 +22,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from kslab import notes, tracking
+from kslab import notes, tracking, tracks
 
 ROOT = Path(__file__).resolve().parents[1]
-RESULTS_DIR = ROOT / "results"
-BASELINES_DIR = ROOT / "baselines"
-REPORTS_DIR = ROOT / "reports"
 DATA_DIR = ROOT / "data"
 KSAFEGUARD_ROOT = ROOT.parent / "k-safeguard"
 
@@ -226,7 +223,7 @@ class Run:
     ) -> "Run":
         validate_run_id(run_id)
         paths = assert_paths_contained(strict=strict_paths)
-        base = Path(results_dir) if results_dir else RESULTS_DIR
+        base = Path(results_dir) if results_dir else tracks.results_dir()
         directory = base / run_id
         if directory.exists():
             raise SystemExit(f"동일 run ID 결과가 이미 있습니다: {directory}")
@@ -283,6 +280,7 @@ class Run:
             config,
             tags={
                 **note_tags,
+                "kslab.track": tracks.current(required=False),
                 "kslab.code_diff": "code.diff" if patch else None,
                 "kslab.experiment": experiment,
                 "kslab.command": " ".join(sys.argv),
@@ -370,8 +368,9 @@ def publish_baseline(name: str, payload: dict[str, Any], run_id: str | None = No
     if run_id and any(marker in run_id.lower() for marker in SMOKE_MARKERS):
         print(f"[baseline] '{run_id}'는 스모크 실행이라 {name}을 발행하지 않습니다.")
         return None
-    BASELINES_DIR.mkdir(parents=True, exist_ok=True)
-    path = BASELINES_DIR / name
+    directory = tracks.baselines_dir()
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / name
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -380,7 +379,19 @@ def publish_baseline(name: str, payload: dict[str, Any], run_id: str | None = No
 
 
 def append_ledger(row: str, ledger: Path | None = None) -> None:
-    """EXPERIMENTS.md 에 한 줄 추가."""
-    path = Path(ledger) if ledger else ROOT / "EXPERIMENTS.md"
+    """트랙의 EXPERIMENTS.md 에 한 줄 추가."""
+    path = Path(ledger) if ledger else tracks.ledger()
     with path.open("a", encoding="utf-8") as handle:
         handle.write(row.rstrip() + "\n")
+
+
+def __getattr__(name: str) -> Path:
+    """`R.RESULTS_DIR` 등은 지금 트랙의 폴더를 가리킨다(트랙 분리 전 러너 호환)."""
+    lookup = {
+        "RESULTS_DIR": tracks.results_dir,
+        "BASELINES_DIR": tracks.baselines_dir,
+        "REPORTS_DIR": tracks.reports_dir,
+    }
+    if name in lookup:
+        return lookup[name]()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

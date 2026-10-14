@@ -15,7 +15,7 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from kslab import corpus as C
 from kslab import features as F
@@ -137,7 +137,7 @@ def main() -> None:
             "random_seed": args.random_seed,
             "gen_seed": args.gen_seed,
             "regenerate_with": (
-                f"python -m exp.run_proto_export --run-id <새 run-id> "
+                f"python -m restoration.exp.run_proto_export --run-id <새 run-id> "
                 f"--corpus-size {args.corpus_size} --epochs {args.epochs}"
             ),
             "thresholds_source": "E8(e8-mlp-30k) — reports/E8_ABSTENTION.md",

@@ -29,9 +29,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-ROOT = Path(__file__).resolve().parents[1]
-NOTES_DIR = ROOT / "notes"
-RESULTS_DIR = ROOT / "results"
+from kslab import tracks
 
 STAGE_FILE = "stage.json"
 STAGE_DOC = "STAGE.md"
@@ -87,6 +85,12 @@ STAGE_TEMPLATE = """# 단계 {stage}
 
 ## {reviews}
 """
+
+
+def _stage_cmd() -> str:
+    """안내 문구에 쓰는 단계 관리 명령. 트랙이 안 정해졌으면 자리표시로 둔다."""
+    track = tracks.current(required=False)
+    return f"python -m {tracks.module(track)}.stage" if track else "python -m <트랙>.exp.stage"
 
 
 class GateError(SystemExit):
@@ -166,7 +170,7 @@ class Stage:
         return self.directory / STAGE_DOC
 
     def finished(self, results_dir: Path | None = None) -> list[str]:
-        base = Path(results_dir) if results_dir else RESULTS_DIR
+        base = Path(results_dir) if results_dir else tracks.results_dir()
         return [r for r in self.runs if (base / r / "manifest.json").exists()]
 
     def state(self, results_dir: Path | None = None) -> str:
@@ -187,7 +191,7 @@ class Stage:
 
 
 def load_stages(notes_dir: Path | None = None) -> list[Stage]:
-    base = Path(notes_dir) if notes_dir else NOTES_DIR
+    base = Path(notes_dir) if notes_dir else tracks.notes_dir()
     stages = []
     if base.exists():
         for path in sorted(base.glob(f"*/{STAGE_FILE}")):
@@ -199,7 +203,7 @@ def get_stage(stage_id: str, notes_dir: Path | None = None) -> Stage:
     for stage in load_stages(notes_dir):
         if stage.stage_id == stage_id:
             return stage
-    raise GateError(f"단계 '{stage_id}' 가 없습니다. 'python -m exp.stage status' 로 확인하세요.")
+    raise GateError(f"단계 '{stage_id}' 가 없습니다. '{_stage_cmd()} status' 로 확인하세요.")
 
 
 def find_run(run_id: str, notes_dir: Path | None = None) -> Stage | None:
@@ -210,7 +214,7 @@ def find_run(run_id: str, notes_dir: Path | None = None) -> Stage | None:
 
 
 def new_stage(stage_id: str, run_ids: list[str], notes_dir: Path | None = None) -> Stage:
-    base = Path(notes_dir) if notes_dir else NOTES_DIR
+    base = Path(notes_dir) if notes_dir else tracks.notes_dir()
     validate_id(stage_id)
     directory = base / stage_id
     if directory.exists():
@@ -299,7 +303,7 @@ def check_start(
     if stage is None:
         raise GateError(
             f"run '{run_id}' 의 노트가 없습니다. 먼저 단계에 등록하세요:\n"
-            f"    python -m exp.stage new <단계-id> --runs {run_id}\n"
+            f"    {_stage_cmd()} new <단계-id> --runs {run_id}\n"
             "그리고 노트의 '왜 돌리나'·'무엇을 바꿨나'를 채운 뒤 다시 실행합니다.\n"
             "(파이프라인 점검용이면 run-id에 'smoke'를 넣으면 게이트를 건너뜁니다.)"
         )
@@ -328,7 +332,7 @@ def check_start(
         raise GateError(
             "리뷰가 끝나지 않은 단계가 있어 새 단계를 시작할 수 없습니다:\n"
             + "\n".join(lines)
-            + "\n'python -m exp.stage show <단계-id>' 로 리뷰 자료를 보고, 사용자 피드백을 "
+            + f"\n'{_stage_cmd()} show <단계-id>' 로 리뷰 자료를 보고, 사용자 피드백을 "
             "받아 기록한 뒤 진행하세요."
         )
     if not stage.sealed:
@@ -393,7 +397,7 @@ def record_review(
 
 def prereg_changed(stage: Stage, run_id: str, results_dir: Path | None = None) -> bool | None:
     """실행 전 칸이 실행 뒤에 바뀌었나. 시작 시점 사본이 없으면 None."""
-    base = Path(results_dir) if results_dir else RESULTS_DIR
+    base = Path(results_dir) if results_dir else tracks.results_dir()
     snapshot = base / run_id / "note-at-start.md"
     path = stage.note_path(run_id)
     if not snapshot.exists() or not path.exists():
@@ -401,3 +405,12 @@ def prereg_changed(stage: Stage, run_id: str, results_dir: Path | None = None) -
     return prereg_digest(snapshot.read_text(encoding="utf-8")) != prereg_digest(
         path.read_text(encoding="utf-8")
     )
+
+
+def __getattr__(name: str) -> Path:
+    """`N.NOTES_DIR`·`N.RESULTS_DIR`는 지금 트랙의 폴더를 가리킨다."""
+    if name == "NOTES_DIR":
+        return tracks.notes_dir()
+    if name == "RESULTS_DIR":
+        return tracks.results_dir()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

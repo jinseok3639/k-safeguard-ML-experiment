@@ -21,8 +21,8 @@ import argparse
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "k-safeguard" / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "k-safeguard" / "src"))
 sys.dont_write_bytecode = True      # 저장소에 .pyc 를 남기지 않는다
 
 from kslab import features as F

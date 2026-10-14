@@ -3,7 +3,7 @@
 작성일 2026-08-23 (2026-08-24, 2026-08-25, 2026-08-26 갱신) · 실행 환경: GPU 없음(Intel UHD), 12코어 CPU, RAM 15.7GB
 (E0~E9b) + Google Colab Tesla T4(E10, 실제 가드레일 추론만)
 
-`k-safeguard_ml_restoration_plan.md`의 설계 견적을 저장소를 건드리지 않고 `ML/` 안에서
+[`PLAN.md`](../PLAN.md)(구 `k-safeguard_ml_restoration_plan.md`)의 설계 견적을 저장소를 건드리지 않고 `ML/` 안에서
 실증했다. 실험별 상세는 [`EXPERIMENTS.md`](../EXPERIMENTS.md)와 각 보고서를 본다.
 
 ---

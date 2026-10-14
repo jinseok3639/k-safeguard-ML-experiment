@@ -6,7 +6,7 @@ run에는 params·입력 해시·report artifact가 없다. 수치와 판정, �
 
 같은 run-id가 이미 MLflow에 있으면 건너뛰므로 여러 번 돌려도 된다.
 
-    python -m exp.backfill_mlflow
+    python -m restoration.exp.backfill_mlflow
 """
 
 from __future__ import annotations
@@ -18,10 +18,10 @@ import sys
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from kslab import record as R
-from kslab import tracking
+from kslab import tracking, tracks
 
 # baseline 파일 접두사 -> 러너가 쓰는 experiment 이름.
 EXPERIMENTS = {
@@ -45,7 +45,7 @@ _LEDGER_ROW = re.compile(r"^\|\s*(\d{4}-\d{2}-\d{2})\s*\|\s*`([^`]+)`")
 def ledger_dates() -> dict[str, int]:
     """EXPERIMENTS.md 에서 run-id -> 실행일(UTC 자정, ms)."""
     dates: dict[str, int] = {}
-    for line in (R.ROOT / "EXPERIMENTS.md").read_text(encoding="utf-8").splitlines():
+    for line in (tracks.ledger("restoration")).read_text(encoding="utf-8").splitlines():
         match = _LEDGER_ROW.match(line)
         if match:
             stamp = calendar.timegm(time.strptime(match.group(1), "%Y-%m-%d"))

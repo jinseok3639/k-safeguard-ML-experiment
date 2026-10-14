@@ -1,17 +1,21 @@
 """실험 단계(stage) 관리 — 노트 틀 만들기, 리뷰 자료 보기, 리뷰 기록.
 
-    python -m exp.stage new s02-tensify-threshold --runs e11-a e11-b   # 단계와 노트 틀 생성
-    python -m exp.stage add-run s02-tensify-threshold e11-c --reason "..."
-    python -m exp.stage status                                         # 전체 단계 상태
-    python -m exp.stage show s02-tensify-threshold                     # 리뷰 자료 한 번에 보기
-    python -m exp.stage sync s02-tensify-threshold                     # 노트를 MLflow에 반영
-    python -m exp.stage review s02-tensify-threshold --verdict approve --feedback "..."
+트랙마다 따로 돈다. 각 트랙의 `exp/stage.py`가 이 모듈을 부른다.
+
+    python -m restoration.exp.stage new <단계-id> --runs <run-id>...
+    python -m restoration.exp.stage add-run <단계-id> <run-id> --reason "..."
+    python -m restoration.exp.stage status                    # 이 트랙의 전체 단계 상태
+    python -m restoration.exp.stage show <단계-id>   # 리뷰 자료 한 번에 보기
+    python -m restoration.exp.stage sync <단계-id>   # 노트를 MLflow에 반영
+    python -m restoration.exp.stage review <단계-id> --verdict approve --feedback "..."
+
+가드레일 트랙은 `restoration` 자리에 `guardrail`을 쓴다.
 
 흐름: new → 노트의 '왜 돌리나'·'무엇을 바꿨나' 작성 → 러너 실행(같은 단계는 병렬 가능) →
 '해석'·'다음'과 STAGE.md 작성 → show 로 리뷰 → review 로 피드백 기록 → 다음 단계.
 
-`review`의 --feedback 은 리뷰어(사용자)의 말을 그대로 적는다. 승인(approve) 전에는 다른
-단계의 run이 시작되지 않는다. revise 는 피드백만 남기고 단계를 열어 둔다.
+`review`의 --feedback 은 리뷰어(사용자)의 말을 그대로 적는다. 승인(approve) 전에는 같은
+트랙의 다른 단계 run이 시작되지 않는다. revise 는 피드백만 남기고 단계를 열어 둔다.
 """
 
 from __future__ import annotations
@@ -24,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from kslab import notes as N
-from kslab import tracking
+from kslab import tracking, tracks
 
 _STATE_LABEL = {
     "planned": "계획됨(미시작)",
@@ -66,8 +70,10 @@ def cmd_add_run(args) -> None:
 
 def cmd_status(_args) -> None:
     stages = N.load_stages()
+    print(f"트랙: {tracks.current()}  ({tracks.notes_dir()})")
     if not stages:
-        print("단계가 없습니다. 'python -m exp.stage new <단계-id> --runs <run-id>...'")
+        print(f"[{tracks.current()}] 단계가 없습니다. "
+              f"'python -m {tracks.module()}.stage new <단계-id> --runs <run-id>...'")
         return
     for stage in stages:
         finished = set(stage.finished())
@@ -113,12 +119,12 @@ def cmd_show(args) -> None:
         out.append(
             f"> 소요 {manifest.get('elapsed_seconds')}s · 커밋 `{str(git.get('commit'))[:10]}`"
             f"{' + 미커밋 변경(code.diff)' if git.get('dirty') else ''} · "
-            f"결과 `results/{run_id}/`"
+            f"결과 `{tracks.current()}/results/{run_id}/`"
         )
         changed = N.prereg_changed(stage, run_id)
         if changed:
             out.append("> **주의: '왜 돌리나'/'무엇을 바꿨나'가 실행 시작 뒤에 수정됐습니다.** "
-                       f"시작 시점 원본은 `results/{run_id}/note-at-start.md`.")
+                       f"시작 시점 원본은 `{tracks.current()}/results/{run_id}/note-at-start.md`.")
         elif changed is None:
             out.append("> 시작 시점 노트 사본이 없어 실행 전 칸의 변경 여부를 확인할 수 없습니다.")
         headline = manifest.get("headline")
