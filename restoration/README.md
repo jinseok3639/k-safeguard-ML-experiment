@@ -1,7 +1,6 @@
 # 복원기 실험 트랙
 
 난독화된 한국어(된소리, 연음, 종성 크래밍 등)를 원문 후보로 되돌리는 복원기를 실험한다.
-설계 견적 원본은 [`PLAN.md`](./PLAN.md)(구 `k-safeguard_ml_restoration_plan.md`).
 
 - **주 목적**: k-safeguard에 탑재될 복원기의 성능 최대화.
 - **부 목적**: 복원기가 다루는 난독화 종류(커버리지) 확대.
@@ -10,8 +9,7 @@
 
 1. [`reports/SUMMARY.md`](./reports/SUMMARY.md) — E0~E10 전체를 묶은 종합 판정과 저장소에
    돌려줄 산출물.
-2. [`EXPERIMENTS.md`](./EXPERIMENTS.md) — 실험별 한 줄 대장. 개별 상세는 [`reports/`](./reports/).
-3. [`notes/`](./notes/) — 2026-10 이후 단계별 실험 이유·해석·리뷰 기록.
+2. [`EXPERIMENTS.md`](./EXPERIMENTS.md) — 단계별 질문·답과 run별 핵심 수치. 개별 상세는 [`reports/`](./reports/).
 
 ## 이 트랙의 규칙
 
@@ -41,8 +39,9 @@ python -m restoration.exp.run_e8_abstention --run-id <run-id> --corpus-size 3000
 2. 해당 기법의 음절 exact가 현행 규칙/사전 방식 대비 유의하게 높을 것.
 3. CPU p95 지연 ≤ 100ms(MLP) / ≤ 200ms(BiLSTM).
 
-## 지금 상태 (2026-10-14)
+## 지금 상태 (2026-10-26)
 
-- s01(E8b, BiLSTM + abstention)은 승인으로 닫혔다.
-- 다음 단계는 아직 만들지 않았다. 논의 중인 방향은 "복원기가 자체 난독화 생성기에 얼마나
-  묶여 있는가"를 먼저 재는 것이고, 외부 기준으로 KOTOX를 쓰기로 했다([`DATASETS.md`](../DATASETS.md)).
+- S01~S03이 닫혔다. 요약은 [`EXPERIMENTS.md`](./EXPERIMENTS.md) 단계 표.
+- S02에서 복원기가 자체 난독화 생성기 패턴에 묶여 있음을 확인했고(외부 기준: KOTOX,
+  [`DATASETS.md`](../DATASETS.md)), S03에서 임계값 보정만으로는 정상·난독화를 가르지 못함을 확인했다.
+  다음 단계는 난독화 위치 탐지를 함께 학습하는 방향을 검토 중이다.

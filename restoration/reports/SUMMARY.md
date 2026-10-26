@@ -3,7 +3,7 @@
 작성일 2026-08-23 (2026-08-24, 2026-08-25, 2026-08-26 갱신) · 실행 환경: GPU 없음(Intel UHD), 12코어 CPU, RAM 15.7GB
 (E0~E9b) + Google Colab Tesla T4(E10, 실제 가드레일 추론만)
 
-[`PLAN.md`](../PLAN.md)(구 `k-safeguard_ml_restoration_plan.md`)의 설계 견적을 저장소를 건드리지 않고 `ML/` 안에서
+자모 슬롯 복원 모델의 설계안을 k-safeguard 저장소를 건드리지 않고 별도 실험 폴더에서
 실증했다. 실험별 상세는 [`EXPERIMENTS.md`](../EXPERIMENTS.md)와 각 보고서를 본다.
 
 ---
@@ -295,7 +295,7 @@ tensify 모델이 그 자리를 "복원"하려 드는 교차 오염이 지금 �
 
 ## 이 실험실이 지킨 경계
 
-- **모든 파일이 `ML/` 안에만** — venv, 코퍼스 캐시, 체크포인트, 결과물 전부.
+- **모든 파일이 실험 폴더 안에만** — venv, 코퍼스 캐시, 체크포인트, 결과물 전부.
   `env.ps1`이 HF·torch 캐시를 `data/`로 돌리고, 러너가 시작할 때 경로 격리를 검사한다.
 - **k-safeguard 저장소는 읽기 전용** — 설치하지 않고 `src`를 sys.path에 얹었고,
   `sys.dont_write_bytecode`로 `.pyc`도 남기지 않았다. 브랜치·커밋·PR 없음.

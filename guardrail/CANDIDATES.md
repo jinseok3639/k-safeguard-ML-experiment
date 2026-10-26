@@ -1,8 +1,7 @@
 # 가드레일 후보
 
 2026-10-13 HF Hub 조사 결과다. **아직 선정하지 않았다** — 후보만 기록해 두고 선정은 나중에
-한다(2026-10-14 결정). 선정 기준은 사용자가 제시한 것을 따른다: 축마다 3개 이상, 최신성·
-평가 점수·사용량.
+한다(2026-10-14 결정). 선정 기준: 축마다 3개 이상, 최신성·평가 점수·사용량.
 
 - 메타데이터(`dl30`=최근 30일 다운로드, 공개일, 파라미터, 가중치 크기, 접근 제한, 라이선스,
   카드의 한국어 표시)는 2026-10-13에 `huggingface_hub.HfApi.model_info`로 받은 값이다.
@@ -33,7 +32,7 @@
 | [kakaocorp/kanana-safeguard-8b](https://hf.co/kakaocorp/kanana-safeguard-8b) | 2025-05 | 8.03B / 16.1GB | 625 | 공개 | Apache-2.0 | ○ | 카카오. 증오·괴롭힘·성적·범죄·아동 성착취·자살 자해·잘못된 정보 7범주 |
 | [nvidia/Nemotron-3.5-Content-Safety](https://hf.co/nvidia/Nemotron-3.5-Content-Safety) | 2026-05 | 4.3B / 8.6GB | 16,264 | 공개 | other | ○ | 다국어, Gemma 3 기반 |
 | [Qwen/Qwen3Guard-Gen-4B](https://hf.co/Qwen/Qwen3Guard-Gen-4B) | 2025-09 | 4.41B / 8.8GB | 32,740 | 공개 | Apache-2.0 | 표시 없음 | |
-| [Qwen/Qwen3Guard-Gen-0.6B](https://hf.co/Qwen/Qwen3Guard-Gen-0.6B) | 2025-09 | 0.75B / 1.5GB | 187,851 | 공개 | Apache-2.0 | 표시 없음 | 유해성 축에서 이 머신에 올릴 수 있는 크기 |
+| [Qwen/Qwen3Guard-Gen-0.6B](https://hf.co/Qwen/Qwen3Guard-Gen-0.6B) | 2025-09 | 0.75B / 1.5GB | 187,851 | 공개 | Apache-2.0 | 표시 없음 | 유해성 축에서 6GB급 GPU에 올릴 수 있는 크기 |
 | [Horizon-Labs/content-safety-guard-base](https://hf.co/Horizon-Labs/content-safety-guard-base) | 2026-09 | 0.31B / 1.2GB | 130 | 공개 | Apache-2.0 | ○ | 최신. 인젝션 쪽과 같은 계열 |
 | [iknow-lab/llama-3.2-3B-wildguard-ko](https://hf.co/iknow-lab/llama-3.2-3B-wildguard-ko) | 2024-10 | 3.21B / 6.4GB | 35 | 공개 | llama3.2 | ○ | 한국어 특화. K-SafeGuard 표에서 2위 |
 | [google/shieldgemma-2b](https://hf.co/google/shieldgemma-2b) | 2024-07 | 2.61B / 5.2GB | 12,810 | 수동 승인 | gemma | 표시 없음 | |
@@ -53,17 +52,17 @@
   쪽이 나은지는 직접 재 봐야 안다.
 - 제안은 교체가 아니라 **가드레일을 여럿 두는 것**이다.
 
-## 이 머신에서 측정한 속도 (2026-10-13)
+## 측정한 속도 (2026-10-13)
 
-`transformers 4.57.6`, fp16, RTX 4050 6GB.
+`transformers 4.57.6`, fp16, RTX 4050 Laptop 6GB.
 
 | 모델 | 속도 | VRAM |
 |---|---|---|
 | Horizon-Labs prompt-injection-guard-base (0.31B) | 1,184행/초 | 0.7GB |
 | kanana-safeguard-prompt-2.1b | 57행/초 | 4.5GB |
-| MarkrAI/ksafeguard-8b (4비트 로드 시도) | 로드 중 WSL 재시작 | — |
+| MarkrAI/ksafeguard-8b (4비트) | 6GB에서 로드 실패 | — |
 
 기존 벤치마크(`k-safeguard/hf_repo/benchmark.jsonl`, 8,585행 = 505 시드 × 원문 1 + 기법 8종 ×
 강도 2, 문장 길이 중앙값 31자)를 기준으로 인코더는 약 7초, Kanana 프롬프트 모델은 약
-2분 30초다. 인젝션 축은 시간이 제약이 아니다. 유해성 축은 후보 대부분이 3B~8B라 이
-머신에서는 돌리기 어렵다.
+2분 30초다. 인젝션 축은 시간이 제약이 아니다. 유해성 축은 후보 대부분이 3B~8B라 외부 GPU가
+필요하다.

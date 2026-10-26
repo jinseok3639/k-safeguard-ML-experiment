@@ -7,6 +7,8 @@
 단계(질문 하나) 하나에 한 줄. `python -m guardrail.exp.stage sync <단계-id>`가 다시 만든다.
 
 <!-- stages:begin (stage sync가 다시 쓴다. 손으로 고치지 않는다) -->
+| 단계 | 질문 | 답 | 상태 |
+|---|---|---|---|
 <!-- stages:end -->
 
 ## run 기록

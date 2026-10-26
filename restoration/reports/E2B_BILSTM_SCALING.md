@@ -3,8 +3,7 @@
 > 상태: `PARTIAL_INTERRUPTED`
 >
 > `e2-bilstm-30k` 실행을 tensify 학습 도중 의도적으로 중단했다. run 산출물(metrics.json 등)이
-> 없으므로 이 문서가 유일한 기록이다. 원본 콘솔 로그는
-> [`E2B_BILSTM_30K_partial.log`](./E2B_BILSTM_30K_partial.log).
+> 없으므로 이 문서가 유일한 기록이다.
 
 ## 왜 중단했나
 

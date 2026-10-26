@@ -2,7 +2,7 @@
 
 > 상태: `PROMOTE_CANDIDATE`(liaison·jongseong_cram은 BiLSTM 쪽, tensify는 미결)
 >
-> run-id `e8-mlp-bilstm-30k-20261007` · 2026-10-07 · WSL2 22코어 CPU(GPU 없음)
+> run-id `e8-mlp-bilstm-30k-20261007` · 2026-10-07 · CPU 학습(22스레드)
 > baseline: `baselines/e8_abstention_v2.json` (v1은 `e8-mlp-30k` 그대로 보존)
 
 SUMMARY "아직 열려 있는 것 3"의 실행이다. E8은 MLP로만 돌렸고, E2b는 BiLSTM이 단일
@@ -36,7 +36,7 @@ jongseong_cram +29.93%p(MLP +5.20%p).
 3. **jongseong_cram의 exact 0은 그대로다.** intensity 1.0에서 raw CER이 69.5%라 CER을
    51.7%p 줄여도(thr 0) 문장 전체가 맞는 경우가 0.4%뿐이다. CER 감소폭은 크지만 "원문이
    돌아왔다"는 뜻은 아니다.
-4. **MLP 재현.** 코퍼스를 이 머신에서 새로 내려받아 만들었다. 기존 `e8-mlp-30k` 대비
+4. **MLP 재현.** 코퍼스를 새로 내려받아 다시 만들었다. 기존 `e8-mlp-30k` 대비
    tensify +11.84→+11.31%p(오변경 0.49% 동일), cram thr 0.99 +5.38→+5.20%p,
    liaison thr 0.99 +4.66→+4.09%p(오변경 0.49%→0.00%). 결론은 같고 수치는 소폭 다르다.
    차이의 원인(코퍼스 내용 차이인지 실행 분산인지)은 확인하지 않았다.

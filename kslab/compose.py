@@ -202,7 +202,7 @@ PROFILES: tuple[Profile, ...] = (
     Profile("d1_vowel", (_V,)),
     Profile("d1_aspirate", (_A,)),
     # 깊이 2 — 순서가 의미 있는 짝만. tensify·cram은 교환법칙이 성립해 한 순서만 둔다.
-    Profile("d2_liaison_then_tensify", (_L, _T)),   # 사용자가 든 예: 연음 후 된소리
+    Profile("d2_liaison_then_tensify", (_L, _T)),   # 예: 연음 후 된소리
     Profile("d2_tensify_then_liaison", (_T, _L)),
     Profile("d2_liaison_then_cram", (_L, _C)),
     Profile("d2_cram_then_liaison", (_C, _L)),
@@ -213,7 +213,7 @@ PROFILES: tuple[Profile, ...] = (
     Profile("d3_canonical", (_T, _L, _C)),
     Profile("d3_reversed", (_C, _L, _T)),
     Profile("d3_with_vowel", (_L, _V, _C)),
-    # 깊이 5 — 사용자가 든 예: 연음 + 구개음화 + ㅎ결합 후 된소리 + 종성 크래밍.
+    # 깊이 5 — 예: 연음 + 구개음화 + ㅎ결합 후 된소리 + 종성 크래밍.
     Profile("d5_full_attack", ("liaison_correct", "palatalize", _A, _T, _C)),
     # 음운 규칙만으로 쌓은 정준 도출. 결과가 실제 표준 발음 표기에 가깝다.
     # 옷고름 -> 옫꼬름, 꽃다발 -> 꼳따발, 읽는 -> 잉는.

@@ -53,7 +53,7 @@ class TrackTest(unittest.TestCase):
         self.assertEqual(T.results_dir(), self.tmp / "guardrail" / "results")
         self.assertEqual(T.ledger(), self.tmp / "guardrail" / "EXPERIMENTS.md")
         self.assertEqual(R.BASELINES_DIR, self.tmp / "guardrail" / "baselines")
-        self.assertEqual(N.NOTES_DIR, self.tmp / "guardrail" / "notes")
+        self.assertEqual(N.NOTES_DIR, self.tmp / "private" / "guardrail" / "notes")
 
     def test_env_overrides_runner_package(self):
         T.use("restoration")
