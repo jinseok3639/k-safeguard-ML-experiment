@@ -20,7 +20,7 @@ MLflow와 manifest에 있다). 화면에는 `--title`로 준 한국어 제목이
 흐름: new → 노트의 '왜 돌리나'·'무엇을 바꿨나' 작성 → 러너 실행(같은 단계는 병렬 가능) →
 '해석'·'다음'과 STAGE.md 작성 → show 로 리뷰 → review 로 피드백 기록 → 다음 단계.
 
-`review`의 --feedback 은 리뷰어(사용자)의 말을 그대로 적는다. 승인(approve) 전에는 같은
+`review`의 --feedback 은 리뷰어의 말을 그대로 적는다. 승인(approve) 전에는 같은
 트랙의 다른 단계 run이 시작되지 않는다. revise 는 피드백만 남기고 단계를 열어 둔다.
 """
 
@@ -160,14 +160,13 @@ _LEDGER_END = "<!-- stages:end -->"
 
 def ledger_table(stages: list[N.Stage]) -> str:
     """실험 대장의 단계 표. 단계 하나에 한 줄: 질문과 답의 첫 줄, 상태."""
-    rows = ["| 단계 | 질문 | 답 | 상태 | 문서 |", "|---|---|---|---|---|"]
+    rows = ["| 단계 | 질문 | 답 | 상태 |", "|---|---|---|---|"]
     for stage in stages:
         doc = N.sections(stage.doc_path().read_text(encoding="utf-8"))
-        link = f"[{stage.code}](./notes/{stage.directory.name}/{N.STAGE_DOC})"
         rows.append(
             f"| **{stage.display_name}** | {N.first_line(doc.get(N.STAGE_QUESTION, ''))} | "
             f"{N.first_line(doc.get(N.STAGE_ANSWER, ''), sentence=False) or '-'} | "
-            f"{_STATE_LABEL[stage.state()]} | {link} |"
+            f"{_STATE_LABEL[stage.state()]} |"
         )
     return "\n".join(rows)
 
@@ -182,8 +181,9 @@ def write_ledger(stages: list[N.Stage]) -> bool:
         return False
     head, rest = text.split(_LEDGER_BEGIN, 1)
     _, tail = rest.split(_LEDGER_END, 1)
+    # 커밋되는 파일이라 Windows에서도 LF로 쓴다.
     path.write_text(f"{head}{_LEDGER_BEGIN}\n{ledger_table(stages)}\n{_LEDGER_END}{tail}",
-                    encoding="utf-8")
+                    encoding="utf-8", newline="\n")
     return True
 
 

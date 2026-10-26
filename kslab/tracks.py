@@ -3,8 +3,8 @@
     restoration/   복원기(난독화 → 원문 후보) ML 실험
     guardrail/     가드레일 벤치마크 실험
 
-트랙마다 `exp/`(러너), `notes/`(노트·리뷰 게이트), `reports/`, `baselines/`,
-`results/`(커밋 제외), `EXPERIMENTS.md`(실험 대장)를 따로 갖는다. 리뷰 게이트도 트랙별이다 —
+트랙마다 `exp/`(러너), `reports/`, `baselines/`, `results/`(커밋 제외),
+`EXPERIMENTS.md`(실험 대장)를 따로 갖는다. 노트·리뷰 게이트는 `private/<트랙>/notes/`(커밋 제외)에 둔다. 리뷰 게이트도 트랙별이다 —
 가드레일 단계가 리뷰를 기다려도 복원기 단계는 막히지 않는다.
 
 라이브러리(`kslab/`), 환경(`env.sh`), `data/`(코퍼스·모델 캐시·MLflow)는 루트에서 공유한다.
@@ -62,7 +62,7 @@ def reports_dir(name: str | None = None) -> Path:
 
 
 def notes_dir(name: str | None = None) -> Path:
-    return track_dir(name) / "notes"
+    return ROOT / "private" / (name or current()) / "notes"
 
 
 def ledger(name: str | None = None) -> Path:

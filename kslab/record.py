@@ -41,7 +41,7 @@ def validate_run_id(run_id: str) -> str:
 
 
 def assert_paths_contained(strict: bool = True) -> dict[str, str]:
-    """캐시 경로가 전부 ML/ 하위인지 확인. 아니면 예외.
+    """캐시 경로가 전부 저장소 하위인지 확인. 아니면 예외.
 
     strict=False면 미설정 변수를 허용한다(그 라이브러리를 안 쓰는 실험용).
     """
@@ -380,7 +380,7 @@ def publish_baseline(name: str, payload: dict[str, Any], run_id: str | None = No
     path = directory / name
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+        encoding="utf-8", newline="\n",  # 커밋되는 파일이라 Windows에서도 LF로 쓴다
     )
     return path
 

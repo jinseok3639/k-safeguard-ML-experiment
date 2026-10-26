@@ -1,7 +1,7 @@
 """MLflow 저장소를 지금 구성(트랙 → 단계 → run → 학습)으로 다시 만든다.
 
 MLflow는 원본이 아니다 — 원본은 `<트랙>/results/<run-id>/`(manifest·metrics·report)와
-`<트랙>/notes/`다. 그래서 기록 구성을 바꾸면 기존 저장소를 고치지 않고 원본에서 새로 쓴다.
+`private/<트랙>/notes/`다. 그래서 기록 구성을 바꾸면 기존 저장소를 고치지 않고 원본에서 새로 쓴다.
 
     python -m kslab.mlflow_rebuild            # 기존 저장소를 data/mlflow/v1-<시각>/ 로 옮기고 새로 씀
 

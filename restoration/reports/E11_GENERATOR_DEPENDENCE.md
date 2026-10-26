@@ -1,6 +1,6 @@
 # E11 — 생성기 의존도 (s02)
 
-run 4개의 `report.md`를 모은 것. 해석은 `restoration/notes/s02-generator-dependence/`.
+run 4개의 `report.md`를 모은 것. 단계 결론은 [`EXPERIMENTS.md`](../EXPERIMENTS.md)의 S02 행.
 
 ---
 
