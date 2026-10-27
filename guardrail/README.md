@@ -41,4 +41,23 @@ source ./env.sh                                   # 저장소 루트에서
 python -m guardrail.exp.stage status
 ```
 
-러너는 아직 없다. 가드레일을 선정한 뒤 단계(stage)를 만들고 러너를 추가한다.
+### S01 난독화 강건성
+
+kslab 평가셋 v1(난독화 24,444문장 + 원문 695문장)을 가드레일 하나씩에 태운다. 평가셋 전달
+묶음을 `data/evalset/kslab-evalset-v1/`(커밋 제외)에 그대로 복사한 뒤 실행한다.
+
+```bash
+python -m guardrail.exp.run_s01_obf_robustness --run-id s01.1-kanana --guardrail kanana
+```
+
+| `--guardrail` | 모델 | 환경 |
+|---|---|---|
+| `kanana` | `kakaocorp/kanana-safeguard-prompt-2.1b` | `transformers` 4.x |
+| `horizon-base` | `Horizon-Labs/prompt-injection-guard-base` | 4.x(Python 3.10, 4.57.6에서 로드 확인) |
+| `horizon-large` | `Horizon-Labs/prompt-injection-guard-large` | 4.x |
+| `klue-roberta` | `kor-prompt-injection-detection/KLUE_roBERTa_based_model` | 4.x |
+| `gemma4-e2b` | `FrameByFrame/guardrail-korean-gemma-4-E2B` | 5.x(소스 설치) — 가상환경을 따로 둔다 |
+
+모델 id·리비전·백엔드는 `guardrail/scorers.py`의 `GUARDRAILS`에 고정했다. 문장별 점수
+`results/<run-id>/scores.jsonl`은 전달 문서의 `guardrail_scores` 형식이고 P04가 이어 쓴다.
+공격 원문은 들어 있지 않지만 `results/`는 통째로 커밋하지 않는다.
