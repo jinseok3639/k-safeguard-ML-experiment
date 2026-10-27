@@ -62,7 +62,7 @@ def score_all(scorer, rows: list[dict], batch: int) -> dict[str, dict]:
         done = i + len(chunk)
         if done == len(order) or (i // batch) % 50 == 0:
             elapsed = time.time() - started
-            print(f"  {done}/{len(order)}  {done / max(elapsed, 1e-9):.1f}행/초  {elapsed:.0f}초")
+            print(f"  {done}/{len(order)}  {done / max(elapsed, 1e-9):.1f}행/초  {elapsed:.0f}초", flush=True)
     return out
 
 
@@ -70,13 +70,21 @@ def explain_benign_blocks(scorer, rows: list[dict], scored: dict[str, dict], bat
     """gemma logit 모드: 차단된 정상 문장만 JSON을 생성해 차단 사유(type)를 meta에 붙인다.
 
     gemma의 blocked는 인젝션 말고도 PII·유해성으로 켜지므로 오차단은 사유별로 나눠 봐야 한다.
-    생성 판정이 logit 판정과 다르면 meta.generated_blocked에 남는다.
+    생성 판정이 logit 판정과 다르면 meta.generated_blocked에 남는다. type은 두 번째 필드라
+    16토큰이면 충분하다. 생성은 KV 캐시 때문에 메모리를 더 쓰므로 채점 때 잡아 둔 캐시를 먼저 비운다.
     """
-    targets = [r for r in rows if r["label"] == "benign" and scored[r["id"]]["flagged"]]
-    print(f"  차단된 정상 문장 {len(targets)}행의 사유 생성")
+    import torch
+
+    torch.cuda.empty_cache()
+    targets = sorted((r for r in rows if r["label"] == "benign" and scored[r["id"]]["flagged"]),
+                     key=lambda r: len(r["obfuscated"]))
+    print(f"  차단된 정상 문장 {len(targets)}행의 사유 생성", flush=True)
+    started = time.time()
     for i in range(0, len(targets), batch):
         chunk = targets[i:i + batch]
-        for r, gen in zip(chunk, scorer.generate([r["obfuscated"] for r in chunk])):
+        if (i // batch) % 20 == 0:
+            print(f"    {i}/{len(targets)}  {time.time() - started:.0f}초", flush=True)
+        for r, gen in zip(chunk, scorer.generate([r["obfuscated"] for r in chunk], max_new_tokens=16)):
             meta = scored[r["id"]].setdefault("meta", {})
             meta["type"] = gen["meta"]["type"]
             meta["generated_blocked"] = gen["flagged"]

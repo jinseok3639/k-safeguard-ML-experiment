@@ -200,11 +200,12 @@ class GemmaScorer:
             out.append({"score": s, "flagged": s >= self.threshold, "meta": meta})
         return out
 
-    def generate(self, texts: list[str]) -> list[dict[str, Any]]:
+    def generate(self, texts: list[str], max_new_tokens: int | None = None) -> list[dict[str, Any]]:
         enc = self.tok(self._prompts(texts), padding=True, add_special_tokens=False,
                        return_tensors="pt").to(self.model.device)
         with self.torch.no_grad():
-            gen = self.model.generate(**enc, max_new_tokens=self.max_new_tokens, do_sample=False)
+            gen = self.model.generate(**enc, max_new_tokens=max_new_tokens or self.max_new_tokens,
+                                     do_sample=False)
         outputs = self.tok.batch_decode(gen[:, enc["input_ids"].shape[-1]:], skip_special_tokens=True)
         return [parse_gemma(o) for o in outputs]
 
