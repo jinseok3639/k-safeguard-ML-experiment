@@ -446,7 +446,7 @@ TRANSFORMS = {
 }
 
 # 'phonetic' = 정규화로 되돌릴 대상이 없는 음운 변형, 'visual' = 정규화-해결 계열 대조군.
-# 저장소의 experiments/benchmark/run_normalizer_evaluation.py:59 FAMILY_MAP 과 같은 축이다.
+# k-safeguard f6ee374의 experiments/benchmark/run_normalizer_evaluation.py:59 FAMILY_MAP 과 같은 축이다.
 FAMILY = {
     "jamo_decompose": "visual",
     "chosung": "visual",

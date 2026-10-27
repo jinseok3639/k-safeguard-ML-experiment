@@ -19,9 +19,7 @@ from typing import Iterable, Sequence
 from . import obfuscate
 from .jamo import is_syllable
 
-# k-safeguard 저장소는 읽기 전용으로만 참조한다.
-KSAFEGUARD_ROOT = Path(__file__).resolve().parents[2] / "k-safeguard"
-SEED_DIR = KSAFEGUARD_ROOT / "hf_repo" / "seeds"
+SEED_DIR = Path(__file__).resolve().parents[1] / "hf_repo" / "seeds"
 
 
 @dataclass(frozen=True)
@@ -114,7 +112,7 @@ def make_pairs(
     """(cluster_id, source, text) 목록 -> 길이 보존 난독화 페어.
 
     `include_identity=True`면 (clean, clean) 페어를 함께 넣는다. 정상 입력을 건드리지
-    않도록 가르치는 신호이고, clean mutation rate에 직결된다 — 저장소의
+    않도록 가르치는 신호이고, clean mutation rate에 직결된다 — k-safeguard `f6ee374`의
     `experiments/참조용/README.md`가 3위 솔루션에서 짚어둔 아이디어다.
     """
     techniques = list(techniques)

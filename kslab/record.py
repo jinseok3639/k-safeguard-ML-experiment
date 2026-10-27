@@ -1,6 +1,6 @@
 """run 기록 유틸 — manifest, 결정론적 JSON, 경로 격리 검사.
 
-저장소의 `experiments/benchmark/run_clean_baseline.py`가 쓰는 provenance 관행
+k-safeguard `f6ee374`의 `experiments/benchmark/run_clean_baseline.py`가 쓰는 provenance 관행
 (git commit + dirty, 입력 파일 SHA-256, run-id 덮어쓰기 거부)을 그대로 옮겼다.
 
 경로 격리는 이 샌드박스 고유 규칙이다. `datasets`/`torch`의 기본 캐시는 사용자 홈이라,

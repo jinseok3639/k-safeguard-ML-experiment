@@ -75,6 +75,6 @@
 
 ## 외부 데이터로 세면 안 되는 것
 
-[kimchunsik03/KoreanGuardrail](https://hf.co/datasets/kimchunsik03/KoreanGuardrail)은 k-safeguard
-저장소의 `hf_repo/`와 같은 데이터다(정상 시드 204개, 같은 파일 구성과 기법 이름). 이미 쓰고
+[kimchunsik03/KoreanGuardrail](https://hf.co/datasets/kimchunsik03/KoreanGuardrail)은 이 저장소의
+`hf_repo/`(k-safeguard에서 옮겨 옴)와 같은 데이터다(정상 시드 204개, 같은 파일 구성과 기법 이름). 이미 쓰고
 있는 505 시드이므로 외부 검증 자료가 아니다.
