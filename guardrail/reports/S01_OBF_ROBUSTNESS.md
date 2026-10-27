@@ -101,9 +101,12 @@ Kanana는 난독화로 오차단이 늘지 않는다. Horizon은 정상 문장�
 | 판정 | 유형 |
 |---|---|
 | 우선 후보(복원기 범위 target) | `phon_insert`(41.7), `phon_initial`(41.0) |
-| 우선 후보(범위 boundary, 범위 결정 필요) | `shape_foreign`(49.2), `shape_hangul`(49.0), `anagram`(48.0), `translit`(44.1) |
+| 우선 후보(boundary → 범위에 포함, 2026-10-27 결정) | `shape_foreign`(49.2) |
+| 경계 유지(2026-10-27 결정) | `shape_hangul`(49.0), `anagram`(48.0), `translit`(44.1) |
 | 제외(범위 out) | `chosung`(50.0). 초성 복원 제외 결정 |
 | 10% 미만 | 없음 |
+
+`shape_foreign`은 대응표로 결정적으로 되돌릴 수 있고, Kanana 회피(49.2%)와 Horizon base 정상 오차단(24.1%)을 함께 줄일 수 있어 범위에 넣었다. 나머지 셋은 사전 기반 후보가 필요해 오변경 위험이 크다. `translit`·`anagram`은 외부 생성기 데이터뿐이라 근거도 약하다.
 
 target 유형 중에서는 `phon_insert`가 Kanana와 Horizon 양쪽에서 가장 높다. 그 안에서도 `jongseong_cram`·`semivowel_insert` 두 기법이 우선이다.
 
