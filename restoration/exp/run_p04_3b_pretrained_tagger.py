@@ -114,6 +114,7 @@ def main() -> None:
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--epochs", type=int, default=3)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--no-ref", action="store_true", help="BiLSTM 비교 재측정을 건너뜀(시드 반복 run)")
     args = parser.parse_args()
     run_id = args.run_id or {"ft": "p04.3b-kcelectra-ft", "lora": "p04.3c-kcelectra-lora"}[args.variant]
 
@@ -150,7 +151,7 @@ def main() -> None:
     del model
 
     bilstm = {}
-    for seed in (0, 1, 2):
+    for seed in (() if args.no_ref else (0, 1, 2)):
         path = MODELS / f"{BILSTM_RUN}-base-s{seed}.pt"
         ref = EditTagger.load(path, device=args.device)
         bilstm[f"s{seed}"] = assess(ref, dev, records, cleans, batch_size=128)
@@ -158,38 +159,42 @@ def main() -> None:
             bilstm["latency"] = {"cuda": latency(ref, sample, "cuda"), "cpu": latency(ref, sample, "cpu")}
         print(f"[ref] bilstm-s{seed} clean_mut={bilstm[f's{seed}']['clean_mutation']:.4f}", flush=True)
 
-    ref_sum = [summarize(bilstm[f"s{s}"]) for s in (0, 1, 2)]
-    summary = {"kcelectra": summarize(main_result),
-               "bilstm_mean": {k: float(np.mean([s[k] for s in ref_sum]))
-                               for k in ("dev_gain", "clean_mutation", "clean_mutation_strict", "external_gain")}
-               | {"types_ok_counts": [len(s["types_ok"]) for s in ref_sum]}}
+    summary = {"kcelectra": summarize(main_result)}
+    if bilstm:
+        ref_sum = [summarize(bilstm[f"s{s}"]) for s in (0, 1, 2)]
+        summary["bilstm_mean"] = ({k: float(np.mean([s[k] for s in ref_sum]))
+                                   for k in ("dev_gain", "clean_mutation", "clean_mutation_strict", "external_gain")}
+                                  | {"types_ok_counts": [len(s["types_ok"]) for s in ref_sum]})
     metrics = {"kcelectra": main_result, "bilstm": bilstm, "summary": summary,
                "status": "pass" if all(summary["kcelectra"]["checks"].values()) else "fail"}
 
     def pct(x):
         return f"{x * 100:.1f}"
 
-    k, b = summary["kcelectra"], summary["bilstm_mean"]
-    lat_k, lat_b = main_result["latency"], bilstm["latency"]
+    k = summary["kcelectra"]
+    lat_k = main_result["latency"]
     lines = [f"# {run_id} — KcELECTRA {args.variant} vs P04.3 BiLSTM", "",
              f"학습 {fit_minutes:.0f}분, 학습 파라미터 {trainable:,} / 전체 {total:,}", "",
              "| 모델 | dev CER 개선 | 원문 695 오변경(문장부호 무시) | 엄격 | external target 개선 | compose 자동형 2%p 넘은 유형 | 지연 p95 GPU / CPU |",
              "|---|---|---|---|---|---|---|",
              f"| KcELECTRA {args.variant} | {pct(k['dev_gain'])} | {pct(k['clean_mutation'])}% | {pct(k['clean_mutation_strict'])}% | "
-             f"{pct(k['external_gain'])} | {len(k['types_ok'])}/9 | {lat_k['cuda']['p95_ms']:.0f} / {lat_k['cpu']['p95_ms']:.0f} ms |",
-             f"| BiLSTM (시드 3 평균) | {pct(b['dev_gain'])} | {pct(b['clean_mutation'])}% | {pct(b['clean_mutation_strict'])}% | "
-             f"{pct(b['external_gain'])} | {b['types_ok_counts']} | {lat_b['cuda']['p95_ms']:.0f} / {lat_b['cpu']['p95_ms']:.0f} ms |",
-             "", f"## 축별 (KcELECTRA {args.variant})", "",
+             f"{pct(k['external_gain'])} | {len(k['types_ok'])}/9 | {lat_k['cuda']['p95_ms']:.0f} / {lat_k['cpu']['p95_ms']:.0f} ms |"]
+    if bilstm:
+        b, lat_b = summary["bilstm_mean"], bilstm["latency"]
+        lines.append(f"| BiLSTM (시드 3 평균) | {pct(b['dev_gain'])} | {pct(b['clean_mutation'])}% | {pct(b['clean_mutation_strict'])}% | "
+                     f"{pct(b['external_gain'])} | {b['types_ok_counts']} | {lat_b['cuda']['p95_ms']:.0f} / {lat_b['cpu']['p95_ms']:.0f} ms |")
+    lines += ["", f"## 축별 (KcELECTRA {args.variant})", "",
              "| 축/범위 | 문장 | 원래 CER | 개선(기권) | 정확 복원 | ERR(글자) | 개선(기권 없음) | BiLSTM s0 개선 |",
              "|---|---|---|---|---|---|---|---|"]
-    ev, ev0, evb = main_result["eval"]["axis"], main_result["eval_no_abstain"]["axis"], bilstm["s0"]["eval"]["axis"]
+    ev, ev0 = main_result["eval"]["axis"], main_result["eval_no_abstain"]["axis"]
+    evb = bilstm["s0"]["eval"]["axis"] if bilstm else {}
     for key in sorted(ev, key=lambda x: (AXES.index(x.split("/")[0]), x)):
         x = ev[key]
         lines.append(f"| {key} | {x['n']} | {pct(x['raw_cer'])} | {pct(x['cer_gain'])} | {pct(x['exact'])}% | "
                      f"{pct(x['err'])}% | {pct(ev0[key]['cer_gain'])} | {pct(evb.get(key, {}).get('cer_gain', float('nan')))} |")
     lines += ["", "## 유형별 CER 개선 (target 레코드)", "",
               "| 유형 | single | compose 사람형 | compose 자동형 | external | BiLSTM s0 external |", "|---|---|---|---|---|---|"]
-    ty, tyb = main_result["eval"]["type"], bilstm["s0"]["eval"]["type"]
+    ty, tyb = main_result["eval"]["type"], (bilstm["s0"]["eval"]["type"] if bilstm else {})
     for t in T.TYPES:
         if t.id in TARGET:
             cell = lambda d, a: pct(d.get(f"{t.id}/{a}", {}).get("cer_gain", float("nan")))
