@@ -5,7 +5,9 @@
 백엔드:
   cls     시퀀스 분류 인코더(Horizon-Labs, KLUE RoBERTa 등). score = 공격 라벨 softmax 확률
   kanana  kanana-safeguard-prompt. 첫 출력 위치 로짓에서 score = P(A1+A2) / P(A1+A2+SAFE)
-  gemma   guardrail-korean-gemma-4-E2B. JSON 판정을 생성해 "blocked"를 읽는다. score는 없다
+  gemma   guardrail-korean-gemma-4-E2B. 출력 JSON의 "blocked" 값. 두 모드가 있다
+            logit     `{"blocked":` 뒤 다음 토큰에서 score = P(true) / P(true+false). 순전파 1회
+            generate  JSON을 생성해 "blocked"를 읽는다. score는 없다. 차단 사유(type)를 얻을 때 쓴다
 
 `transformers`는 모델마다 맞는 판이 다르다(kanana는 4.x, gemma 4는 5.x). 그래서 여기서는
 import만 늦추고 판 확인은 하지 않는다. 어느 판으로 돌렸는지는 manifest의 pip-freeze에 남는다.
@@ -29,6 +31,7 @@ GEMMA_SYSTEM = (
     '  "reason": "<brief explanation>"\n'
     "}"
 )
+GEMMA_PREFIX = '{"blocked":'
 _POS_WORDS = ("injection", "attack", "unsafe", "jailbreak", "malicious")
 
 
@@ -60,8 +63,9 @@ GUARDRAILS = {g.key: g for g in (
               "788922d02e41fa2c3ffe27c806801f8e59734e84", "cls", pos_label=1,
               note="config에 라벨 이름이 없다. 모델 카드 보고서 순서(normal, attack)를 따라 1을 공격으로 본다"),
     Guardrail("gemma4-e2b", "FrameByFrame/guardrail-korean-gemma-4-E2B",
-              "090d21a33edf4159eab64dbcee33f77e2c0e2284", "gemma", threshold=None,
-              note="blocked는 PII·유해성 차단도 포함한다. meta.type으로 사유를 가른다"),
+              "090d21a33edf4159eab64dbcee33f77e2c0e2284", "gemma",
+              note="blocked는 PII·유해성 차단도 포함한다. meta.type으로 사유를 가른다. "
+                   "logit 모드의 score = P(true) / P(true+false)"),
 )}
 
 
@@ -143,11 +147,11 @@ class KananaScorer:
 
 class GemmaScorer:
     def __init__(self, g: Guardrail, device: str, load_4bit: bool = False,
-                 max_new_tokens: int = 48) -> None:
+                 max_new_tokens: int = 48, mode: str = "logit") -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
-        self.torch, self.max_new_tokens = torch, max_new_tokens
+        self.torch, self.max_new_tokens, self.threshold = torch, max_new_tokens, g.threshold
         self.tok = AutoTokenizer.from_pretrained(g.model, revision=g.revision)
         self.tok.padding_side = "left"
         kwargs: dict[str, Any] = {"dtype": _dtype(torch, device, prefer_bf16=True), "device_map": "auto"}
@@ -159,12 +163,46 @@ class GemmaScorer:
         self.model = AutoModelForCausalLM.from_pretrained(
             g.model, revision=g.revision, **kwargs).eval()
 
+        self.mode = mode
+        # 출력은 항상 `{"blocked": true|false, ...`로 시작한다. 이 앞부분을 붙여 두고
+        # 다음 토큰 ` true`/` false`의 확률만 읽으면 생성 없이 순전파 한 번으로 판정이 나온다.
+        verdict = [self.tok.encode(f'{GEMMA_PREFIX} {v}', add_special_tokens=False) for v in ("true", "false")]
+        prefix = self.tok.encode(GEMMA_PREFIX, add_special_tokens=False)
+        if any(ids[:-1] != prefix for ids in verdict):
+            raise SystemExit(f"판정 토큰이 접두어 뒤 토큰 하나로 나뉘지 않는다: {verdict}")
+        self.true_id, self.false_id = verdict[0][-1], verdict[1][-1]
+
+    def _prompts(self, texts: list[str]) -> list[str]:
+        return [self.tok.apply_chat_template(
+                    [{"role": "system", "content": GEMMA_SYSTEM}, {"role": "user", "content": t}],
+                    tokenize=False, add_generation_prompt=True) for t in texts]
+
     def __call__(self, texts: list[str]) -> list[dict[str, Any]]:
-        messages = [[{"role": "system", "content": GEMMA_SYSTEM}, {"role": "user", "content": t}]
-                    for t in texts]
-        enc = self.tok.apply_chat_template(messages, tokenize=True, add_generation_prompt=True,
-                                           padding=True, return_tensors="pt",
-                                           return_dict=True).to(self.model.device)
+        return self.logit(texts) if self.mode == "logit" else self.generate(texts)
+
+    def logit(self, texts: list[str]) -> list[dict[str, Any]]:
+        prompts = [p + GEMMA_PREFIX for p in self._prompts(texts)]
+        # 채팅 템플릿에 <bos>가 이미 들어 있다
+        enc = self.tok(prompts, padding=True, add_special_tokens=False,
+                       return_tensors="pt").to(self.model.device)
+        with self.torch.no_grad():
+            logits = self.model(**enc, logits_to_keep=1).logits[:, -1, :].float()
+        probs = self.torch.softmax(logits, -1)
+        p_true, p_false = probs[:, self.true_id], probs[:, self.false_id]
+        scores = (p_true / (p_true + p_false)).tolist()
+        mass = (p_true + p_false).tolist()
+        top = logits.argmax(-1).tolist()
+        out = []
+        for s, m, t in zip(scores, mass, top):
+            meta: dict[str, Any] = {"label_mass": round(m, 4)}
+            if t not in (self.true_id, self.false_id):
+                meta["top"] = self.tok.decode([t])
+            out.append({"score": s, "flagged": s >= self.threshold, "meta": meta})
+        return out
+
+    def generate(self, texts: list[str]) -> list[dict[str, Any]]:
+        enc = self.tok(self._prompts(texts), padding=True, add_special_tokens=False,
+                       return_tensors="pt").to(self.model.device)
         with self.torch.no_grad():
             gen = self.model.generate(**enc, max_new_tokens=self.max_new_tokens, do_sample=False)
         outputs = self.tok.batch_decode(gen[:, enc["input_ids"].shape[-1]:], skip_special_tokens=True)

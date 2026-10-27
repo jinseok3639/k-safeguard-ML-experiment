@@ -38,6 +38,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--bootstrap-samples", type=int, default=2000)
     parser.add_argument("--load-4bit", action="store_true", help="gemma 전용")
     parser.add_argument("--max-new-tokens", type=int, default=48, help="gemma 전용")
+    parser.add_argument("--gemma-mode", choices=("logit", "generate"), default="logit",
+                        help="gemma 전용. logit은 순전파 1회, generate는 JSON 생성(S01.5에서 쓴 방식)")
     parser.add_argument("--limit", type=int, default=None,
                         help="앞에서 n행만(스모크 전용. run-id에 smoke가 있어야 한다)")
     return parser.parse_args()
@@ -62,6 +64,22 @@ def score_all(scorer, rows: list[dict], batch: int) -> dict[str, dict]:
             elapsed = time.time() - started
             print(f"  {done}/{len(order)}  {done / max(elapsed, 1e-9):.1f}행/초  {elapsed:.0f}초")
     return out
+
+
+def explain_benign_blocks(scorer, rows: list[dict], scored: dict[str, dict], batch: int) -> None:
+    """gemma logit 모드: 차단된 정상 문장만 JSON을 생성해 차단 사유(type)를 meta에 붙인다.
+
+    gemma의 blocked는 인젝션 말고도 PII·유해성으로 켜지므로 오차단은 사유별로 나눠 봐야 한다.
+    생성 판정이 logit 판정과 다르면 meta.generated_blocked에 남는다.
+    """
+    targets = [r for r in rows if r["label"] == "benign" and scored[r["id"]]["flagged"]]
+    print(f"  차단된 정상 문장 {len(targets)}행의 사유 생성")
+    for i in range(0, len(targets), batch):
+        chunk = targets[i:i + batch]
+        for r, gen in zip(chunk, scorer.generate([r["obfuscated"] for r in chunk])):
+            meta = scored[r["id"]].setdefault("meta", {})
+            meta["type"] = gen["meta"]["type"]
+            meta["generated_blocked"] = gen["flagged"]
 
 
 def _pct(v: dict | None) -> str:
@@ -124,6 +142,7 @@ def main() -> None:
             "threshold": g.threshold, "pos_label": g.pos_label, "guardrail_note": g.note,
             "batch": args.batch, "bootstrap_samples": args.bootstrap_samples, "device": device,
             "load_4bit": args.load_4bit, "max_new_tokens": args.max_new_tokens,
+            "gemma_mode": args.gemma_mode if g.backend == "gemma" else None,
             "limit": args.limit, "evalset_sha256": sums,
             "evalset_license_note": "KOTOX·kotka·korean-jamo-typo MIT, KoG2Padvanced 표시 없음(내부 평가 전용), "
                                     "korean_guardrail_test CC BY 4.0",
@@ -134,9 +153,14 @@ def main() -> None:
 
     print(f"[S01] {g.name}  {len(rows)}행  장치 {device}")
     started = time.time()
-    kwargs = {"load_4bit": args.load_4bit, "max_new_tokens": args.max_new_tokens} if g.backend == "gemma" else {}
-    scored = score_all(S.load(g, device, **kwargs), rows, args.batch)
+    gemma = g.backend == "gemma"
+    kwargs = {"load_4bit": args.load_4bit, "max_new_tokens": args.max_new_tokens,
+              "mode": args.gemma_mode} if gemma else {}
+    scorer = S.load(g, device, **kwargs)
+    scored = score_all(scorer, rows, args.batch)
     seconds = time.time() - started
+    if gemma and args.gemma_mode == "logit":
+        explain_benign_blocks(scorer, rows, scored, args.batch)
     if device == "cuda":
         import torch
         run.note("gpu", torch.cuda.get_device_name(0))
@@ -145,8 +169,9 @@ def main() -> None:
     out = []
     for r in rows:
         s = scored[r["id"]]
+        threshold = None if gemma and args.gemma_mode == "generate" else g.threshold
         rec = {"id": r["id"], "guardrail": g.name, "score": s["score"], "flagged": s["flagged"],
-               "threshold": g.threshold}
+               "threshold": threshold}
         if "meta" in s:
             rec["meta"] = s["meta"]
         out.append(rec)
