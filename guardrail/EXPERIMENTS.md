@@ -20,3 +20,5 @@
 | 2026-10-27 | `s01.2-horizon-base` | S01.2 Horizon base | 원문 탐지 90.7%, 회피\|원문차단 13.8%, 난독화 오차단 8.4%(원문 1.3%) | `PROVISIONAL_DEV_ONLY` | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
 | 2026-10-27 | `s01.3-horizon-large` | S01.3 Horizon large | 원문 탐지 92.4%, 회피\|원문차단 14.6%, 난독화 오차단 6.8% | `PROVISIONAL_DEV_ONLY` | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
 | 2026-10-27 | `s01.4-klue-roberta` | S01.4 KLUE RoBERTa | 원문 오차단 26.6%로 비교 제외(참고), 회피\|원문차단 42.3% | `DO_NOT_PROMOTE` | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
+| 2026-10-27 | `s01.5-gemma4-e2b` | S01.5 Gemma 4 E2B(생성 판정) | 중단: 생성 방식 5.8~11.4행/초로 1시간 이상 예상. 결과 없음 | 중단 | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
+| 2026-10-27 | `s01.5b-gemma4-e2b-logit` | S01.6 Gemma 4 E2B(확률 판정) | 중단: VRAM 초과·속도 저하로 2회 중단(83%에서 종료). 결과 없음 | 중단 | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
