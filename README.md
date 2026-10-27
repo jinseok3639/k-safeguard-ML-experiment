@@ -47,7 +47,7 @@ python -m restoration.exp.run_e8_abstention --help
 ## 구조
 
 ```
-kslab/            공유 라이브러리 — 자모·난독화 생성기·모델·지표·기록
+kslab/            공유 라이브러리 — 자모·난독화 생성기·모델·지표·기록 (kslab/README.md)
 tests/            공유 라이브러리 테스트
 restoration/      복원기 실험 트랙
 guardrail/        가드레일 실험 트랙
