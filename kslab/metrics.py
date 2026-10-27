@@ -5,7 +5,7 @@
 본다. clean mutation rate는 스펙 §11.4의 실제 승격 기준(≤1%)을 그대로 쓴다 — 된소리
 provider를 DO_NOT_PROMOTE로 만든 축이 정확히 이것이기 때문이다.
 
-`summarize_observations`는 `experiments/benchmark/run_normalizer_evaluation.py:298-332`의
+`summarize_observations`는 k-safeguard `f6ee374`의 `experiments/benchmark/run_normalizer_evaluation.py:298-332`의
 seed-cluster bootstrap을 그대로 이식한 것이다(stdlib만 사용, 동작 동일).
 """
 

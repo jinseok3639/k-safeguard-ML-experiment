@@ -62,7 +62,7 @@
 | kanana-safeguard-prompt-2.1b | 57행/초 | 4.5GB |
 | MarkrAI/ksafeguard-8b (4비트) | 6GB에서 로드 실패 | — |
 
-기존 벤치마크(`k-safeguard/hf_repo/benchmark.jsonl`, 8,585행 = 505 시드 × 원문 1 + 기법 8종 ×
+기존 벤치마크(`hf_repo/benchmark.jsonl`, 8,585행 = 505 시드 × 원문 1 + 기법 8종 ×
 강도 2, 문장 길이 중앙값 31자)를 기준으로 인코더는 약 7초, Kanana 프롬프트 모델은 약
 2분 30초다. 인젝션 축은 시간이 제약이 아니다. 유해성 축은 후보 대부분이 3B~8B라 외부 GPU가
 필요하다.

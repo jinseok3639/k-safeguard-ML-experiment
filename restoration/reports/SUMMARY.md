@@ -302,7 +302,7 @@ tensify 모델이 그 자리를 "복원"하려 드는 교차 오염이 지금 �
 - **505 dev 시드는 평가 전용** — 학습에 넣지 않았다(E0만 진단 목적의 의도적 예외이며
   `SEED_TRAINED_DIAGNOSTIC`으로 표시).
 - **Dacon 데이터 미사용** — 라이선스 미해결. `search/dacon/open.zip`을 열지 않았다.
-  아키텍처 아이디어는 저장소가 이미 검토·기록해 둔 `experiments/참조용/README.md`만 참조했다.
+  아키텍처 아이디어는 k-safeguard `f6ee374`에 검토·기록돼 있는 `experiments/참조용/README.md`만 참조했다.
 - **block/allow 판단 코드 없음** — 모델은 후보만 낸다.
 
 ---
