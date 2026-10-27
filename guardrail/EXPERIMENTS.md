@@ -9,9 +9,14 @@
 <!-- stages:begin (stage sync가 다시 쓴다. 손으로 고치지 않는다) -->
 | 단계 | 질문 | 답 | 상태 |
 |---|---|---|---|
+| **S01 난독화 강건성** | kslab 평가셋 v1의 난독화 16유형 중 어느 것이 인젝션 가드레일을 실제로 통과시키는가. | Kanana는 원문 공격을 가장 잘 막지만(94.0%) 난독화에 가장 많이 뚫린다(회피/원문차단 27.5%). Horizon 인코더는 14~15%로 덜 뚫리지만 난독화된 정상 문장 오차단이 원문의 2.4~6.5배로 오른다. 공통 최상위 위협은 `phon_insert`(받침 채우기·반모음 추가)다. | 실행 중 |
 <!-- stages:end -->
 
 ## run 기록
 
 | 날짜 | run-id | 실험 | 핵심 수치 | 상태 | 보고서 |
 |---|---|---|---|---|---|
+| 2026-10-27 | `s01.1-kanana` | S01.1 Kanana prompt 2.1b | 원문 탐지 94.0%, 회피\|원문차단 27.5%, 난독화 오차단 2.8% | `PROVISIONAL_DEV_ONLY` | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
+| 2026-10-27 | `s01.2-horizon-base` | S01.2 Horizon base | 원문 탐지 90.7%, 회피\|원문차단 13.8%, 난독화 오차단 8.4%(원문 1.3%) | `PROVISIONAL_DEV_ONLY` | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
+| 2026-10-27 | `s01.3-horizon-large` | S01.3 Horizon large | 원문 탐지 92.4%, 회피\|원문차단 14.6%, 난독화 오차단 6.8% | `PROVISIONAL_DEV_ONLY` | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
+| 2026-10-27 | `s01.4-klue-roberta` | S01.4 KLUE RoBERTa | 원문 오차단 26.6%로 비교 제외(참고), 회피\|원문차단 42.3% | `DO_NOT_PROMOTE` | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
