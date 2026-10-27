@@ -179,6 +179,12 @@ class NamingTest(unittest.TestCase):
         self.assertIn("- id: `s03.1-sweep`", note)
         self.assertTrue(stage.doc_path().read_text(encoding="utf-8").startswith("# S03 기법별 임계값"))
 
+    def test_p_series_stage_code(self):
+        stage = N.new_stage("p01-obf-generator", ["p01.1-taxonomy"], self.tmp,
+                            title="난독화 생성기·평가셋", run_titles=["통합 분류표"])
+        self.assertEqual(stage.display_name, "P01 난독화 생성기·평가셋")
+        self.assertEqual(stage.run_display_name("p01.1-taxonomy"), "P01.1 통합 분류표")
+
     def test_untitled_run_falls_back_to_id_and_titles_can_change(self):
         N.new_stage("s04-x", ["r1"], self.tmp, title="제목")
         stage = N.add_run("s04-x", "r2", notes_dir=self.tmp, title="두 번째")

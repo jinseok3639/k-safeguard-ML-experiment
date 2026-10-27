@@ -61,7 +61,8 @@ _ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 _COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 _HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 _COMPARES_RE = re.compile(r"^-\s*비교 대상\s*:\s*(.*)$", re.MULTILINE)
-_STAGE_NUMBER_RE = re.compile(r"^s(\d+)", re.IGNORECASE)
+# 단계 계열: S = 1기(S01~S03), P = 난독화 정의 이후 2기(P01~, 로드맵 작업 번호와 같다).
+_STAGE_NUMBER_RE = re.compile(r"^([sp])(\d+)", re.IGNORECASE)
 _SENTENCE_RE = re.compile(r"^(.+?[.?!])(?:\s|$)")
 
 RUN_TEMPLATE = """# {display}
@@ -172,9 +173,9 @@ class Stage:
 
     @property
     def code(self) -> str:
-        """`s02-...` → `S02`. 번호가 없는 id는 그대로."""
+        """`s02-...` → `S02`, `p01-...` → `P01`. 번호가 없는 id는 그대로."""
         match = _STAGE_NUMBER_RE.match(self.stage_id)
-        return f"S{int(match.group(1)):02d}" if match else self.stage_id
+        return f"{match.group(1).upper()}{int(match.group(2)):02d}" if match else self.stage_id
 
     @property
     def title(self) -> str:
