@@ -267,7 +267,7 @@ class Run:
                 "compares_to": ticket.compares_to,
                 "prereg_sha256": ticket.prereg_sha256,
             }
-            description = ticket.note_text
+            description = notes.for_display(ticket.note_text)
             note_tags = {
                 "kslab.stage": ticket.stage_id,
                 "kslab.compares_to": ticket.compares_to or None,
@@ -277,7 +277,7 @@ class Run:
             }
             display_name = ticket.run_display_name or run_id
             stage = {"id": ticket.stage_id, "display_name": ticket.stage_display_name,
-                     "note": ticket.stage_note,
+                     "note": notes.for_display(ticket.stage_note),
                      "tags": {"kslab.track": tracks.current(required=False)}}
         tracker = tracking.Tracker.start(
             display_name,

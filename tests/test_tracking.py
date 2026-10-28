@@ -204,6 +204,32 @@ class RunIntegrationTest(unittest.TestCase):
         self.assertEqual(set(children), {"S07.1 첫째", "S07.2 둘째"})
         for child in children.values():
             self.assertEqual(child.data.tags["mlflow.parentRunId"], parent.info.run_id)
+            # 설명란에는 작성 안내 주석이 실리지 않는다.
+            self.assertNotIn("<!--", child.data.tags["mlflow.note.content"])
+        # S 계열 단계는 계열 run 아래로 한 겹 더 접힌다.
+        (group,) = self._by_kind(runs, T.GROUP_KIND)
+        self.assertEqual(group.info.run_name, N.STAGE_GROUPS["S"]["display_name"])
+        self.assertEqual(parent.data.tags["mlflow.parentRunId"], group.info.run_id)
+        self.assertEqual(group.info.status, "FINISHED")
+
+    def test_p_series_stage_stays_at_the_top(self):
+        from kslab import notes as N
+
+        notes_dir = self.tmp / "notes"
+        stage = N.new_stage("p09-demo", ["p09.1-a"], notes_dir, title="데모")
+        for path, names in ((stage.doc_path(), (N.STAGE_QUESTION,)),
+                            (stage.note_path("p09.1-a"), N.BEFORE_RUN)):
+            text = path.read_text(encoding="utf-8")
+            for name in names:
+                text = text.replace(f"## {name}\n", f"## {name}\n내용\n")
+            path.write_text(text, encoding="utf-8")
+        R.Run.start("p09.1-a", "E_unit", {}, strict_paths=False,
+                    results_dir=self.tmp / "results", notes_dir=notes_dir).finish({})
+
+        runs = self._runs("restoration")
+        (parent,) = self._by_kind(runs, T.STAGE_KIND)
+        self.assertNotIn("mlflow.parentRunId", parent.data.tags)
+        self.assertEqual(self._by_kind(runs, T.GROUP_KIND), [])
 
     def test_smoke_run_goes_to_smoke_experiment(self):
         run = R.Run.start(

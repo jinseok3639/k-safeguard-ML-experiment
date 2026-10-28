@@ -115,14 +115,16 @@ def compose_steps(size: int, attacker: str, seed: int) -> list[Step]:
     return _chain([_draw(pool, rng) for _ in range(size)], seed)
 
 
-def compose_for(text: str, size: int, attacker: str, seed: int) -> tuple[list[Step], list[str]]:
+def compose_for(text: str, size: int, attacker: str, seed: int,
+                types: frozenset[str] | None = None) -> tuple[list[Step], list[str]]:
     """문장에 실제로 걸리는 기법 `size`개를 채운다.
 
     고른 기법이 문장을 안 바꾸면 그 기법을 빼고 쓰지 않은 유형에서 다시 뽑는다(KOTOX도 실패한 규칙을 다른 규칙으로
     바꿔 다시 시도한다). 최종 레시피와, 시도했다가 뺀 기법 목록을 돌려준다. 유형이 바닥나면 채운 만큼만 쓴다.
+    `types`를 주면 그 유형들에서만 뽑는다(P04 학습 데이터는 복원 대상 유형만 쓴다).
     """
     rng = random.Random(seed)
-    pool = dict(type_weights(attacker))
+    pool = {k: w for k, w in type_weights(attacker).items() if types is None or k in types}
     chosen = [_draw(pool, rng) for _ in range(size)]
     dropped: list[str] = []
     for _ in range(COMPOSE_ROUNDS):
@@ -143,3 +145,17 @@ def single_steps(technique: str, seed: int) -> list[Step]:
 
 def internal_techniques() -> list[str]:
     return sorted(TRANSFORMS)
+
+
+def types_of(record: dict) -> list[str]:
+    """평가셋 레코드에 실제로 걸린 난독화의 유형 id 목록. 키보드 오타 대조군은 ["control"]."""
+    from kslab.external_gen import TYPE_OF
+
+    if record["axis"] == "control":
+        return ["control"]
+    step = record["recipe"][0]
+    if step["generator"] == "kotox":
+        return sorted({TYPE_OF[("kotox", f"rule:{op}")] for op in record["applied_ops"]})
+    if step["generator"] != "kslab":
+        return [TYPE_OF[(step["generator"], step["op"])]]
+    return sorted({T.type_of(op).id for op in record["applied_ops"]})
