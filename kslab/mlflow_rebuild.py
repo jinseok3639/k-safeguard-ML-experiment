@@ -118,7 +118,7 @@ def replay_run(client, experiment: str, stage: N.Stage, run_id: str, results: Pa
         "ksafeguard.git_dirty": upstream.get("dirty"),
         "kslab.rebuilt": "true",
         "note.prereg_sha256": note.get("prereg_sha256"),
-        "note.interpreted": (str(not N.missing(note_text, N.AFTER_RUN)).lower()
+        "note.interpreted": (str(not N.missing(note_text, N.after_run(note_text))).lower()
                              if note_text else None),
         "review.status": _REVIEW_STATUS.get(stage.last_verdict, "pending"),
         "review.feedback": reviews[-1]["feedback"] if reviews else None,
@@ -128,9 +128,10 @@ def replay_run(client, experiment: str, stage: N.Stage, run_id: str, results: Pa
     }
     tracker = tracking.Tracker.start(
         stage.run_display_name(run_id), experiment, manifest.get("config") or {}, tags,
-        description=note_text, start_time_ms=start, activate=False,
+        description=N.for_display(note_text) if note_text else None,
+        start_time_ms=start, activate=False,
         stage={"id": stage.stage_id, "display_name": stage.display_name,
-               "note": stage.doc_path().read_text(encoding="utf-8")},
+               "note": N.for_display(stage.doc_path().read_text(encoding="utf-8"))},
     )
     if tracker is None:
         raise SystemExit(f"{run_id}: MLflow run을 만들지 못했습니다")
@@ -179,7 +180,7 @@ def rebuild_track(client, track: str) -> None:
         reviews = stage.data.get("reviews") or []
         tracking.ensure_stage_run(
             client, experiment, stage.stage_id, stage.display_name,
-            stage.doc_path().read_text(encoding="utf-8"),
+            N.for_display(stage.doc_path().read_text(encoding="utf-8")),
             {"kslab.track": track, "kslab.stage_state": stage.state(),
              "review.status": _REVIEW_STATUS.get(stage.last_verdict, "pending"),
              "review.feedback": reviews[-1]["feedback"] if reviews else None},
@@ -207,7 +208,7 @@ def move_old_store() -> Path | None:
 def main() -> None:
     uri = tracking.tracking_uri()
     if uri is None or not uri.startswith("sqlite:"):
-        raise SystemExit("sqlite MLFLOW_TRACKING_URI 가 필요합니다. 먼저 'source ./env.sh'.")
+        raise SystemExit("sqlite MLFLOW_TRACKING_URI 가 필요합니다. 먼저 '. .\\env.ps1'.")
     moved = move_old_store()
     if moved:
         print(f"기존 저장소를 옮겼습니다: {moved}")

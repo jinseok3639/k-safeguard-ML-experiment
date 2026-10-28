@@ -7,9 +7,11 @@ MLflow 공식 문서의 구성(실험 = 과제, 부모·자식 run으로 묶기,
 따른다. 화면에서는 세 층으로 보인다.
 
     experiment  restoration                      ← 트랙(과제) 하나
-      └ run     S02 생성기 의존도                 ← 단계(질문 하나). 노트 = STAGE.md
-          └ run S02.2 기법군 빼고 학습            ← 실험 run. 노트 = run 노트
-              └ run bilstm · minus_tensify · seed2026   ← 모델 학습 한 번(loss 곡선)
+      └ run     P04 새 ML 정규화기                ← 단계(질문 하나). 노트 = STAGE.md
+          └ run P04.6 KcELECTRA 태거             ← 실험 run. 노트 = run 노트
+              └ run <모델> · <설정> · seed<n>     ← 모델 학습 한 번(loss 곡선)
+
+지난 계열(S00~S03)의 단계는 계열 run(`S 시리즈 · 1기`) 아래에 한 겹 더 접힌다.
 
 | MLflow | 내용 |
 |---|---|
@@ -44,6 +46,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from kslab import notes
+
 ROOT = Path(__file__).resolve().parents[1]
 MLFLOW_DIR = ROOT / "data" / "mlflow"
 ARTIFACT_DIR = MLFLOW_DIR / "artifacts"
@@ -64,6 +68,7 @@ _PARAM_BATCH = 100
 DETAIL_KEYS = ("evaluations", "models", "fits")
 MAX_SUMMARY_METRICS = 400
 STAGE_KIND = "stage"
+GROUP_KIND = "group"
 
 
 def tracking_uri() -> str | None:
@@ -326,29 +331,43 @@ def _set_tags(client, run_id: str, tags: dict[str, Any]) -> None:
             client.set_tag(run_id, key, str(value)[:_TAG_LIMIT])
 
 
+def _holder_run(
+    client, experiment: str, kind: str, key: str, value: str, start_time_ms: int | None
+) -> str:
+    """묶음용 run(단계·계열)을 찾거나 만든다. `kslab.kind`와 키 태그 한 쌍으로 찾는다."""
+    experiment_id = _experiment_id(client, experiment)
+    found = client.search_runs(
+        [experiment_id], f"tags.`kslab.kind` = '{kind}' and tags.`{key}` = '{value}'"
+    )
+    if found:
+        return found[0].info.run_id
+    run = client.create_run(experiment_id, start_time=start_time_ms,
+                            tags={"kslab.kind": kind, key: value})
+    # 묶음 run은 실행되는 것이 없다. 화면에서 '실행 중'으로 돌지 않게 닫아 둔다.
+    client.set_terminated(run.info.run_id, "FINISHED", end_time=start_time_ms)
+    return run.info.run_id
+
+
 def ensure_stage_run(
     client, experiment: str, stage_id: str, display_name: str,
     note: str | None = None, tags: dict[str, Any] | None = None,
     start_time_ms: int | None = None,
 ) -> str:
-    """단계를 나타내는 부모 run을 찾거나 만든다. 실험 run은 이 run의 자식으로 붙는다."""
-    experiment_id = _experiment_id(client, experiment)
-    found = client.search_runs(
-        [experiment_id],
-        f"tags.`kslab.kind` = '{STAGE_KIND}' and tags.`kslab.stage` = '{stage_id}'",
-    )
-    if found:
-        run_id = found[0].info.run_id
-    else:
-        run = client.create_run(experiment_id, start_time=start_time_ms, tags={
-            "kslab.kind": STAGE_KIND, "kslab.stage": stage_id,
-        })
-        run_id = run.info.run_id
-        # 단계 run은 묶음일 뿐 실행되는 것이 없다. 화면에서 '실행 중'으로 돌지 않게 닫아 둔다.
-        client.set_terminated(run_id, "FINISHED", end_time=start_time_ms)
+    """단계를 나타내는 부모 run을 찾거나 만든다. 실험 run은 이 run의 자식으로 붙는다.
+
+    지난 계열(`notes.STAGE_GROUPS`)의 단계는 계열 run 아래에 한 겹 더 접힌다.
+    """
+    run_id = _holder_run(client, experiment, STAGE_KIND, "kslab.stage", stage_id, start_time_ms)
     all_tags = {"mlflow.runName": display_name, **(tags or {})}
     if note is not None:
         all_tags["mlflow.note.content"] = note[:_TAG_LIMIT]
+    group = notes.stage_group(stage_id)
+    if group:
+        group_id = _holder_run(client, experiment, GROUP_KIND, "kslab.group", group["id"],
+                               start_time_ms)
+        _set_tags(client, group_id, {"mlflow.runName": group["display_name"],
+                                     "mlflow.note.content": group["note"]})
+        all_tags["mlflow.parentRunId"] = group_id
     _set_tags(client, run_id, all_tags)
     return run_id
 

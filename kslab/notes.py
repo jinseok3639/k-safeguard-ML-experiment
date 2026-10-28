@@ -4,7 +4,7 @@
 나중에 그 실험을 다시 쓸 수 없다. 그래서 두 가지를 기계적으로 강제한다.
 
 1. **노트 없이는 실행하지 못한다.** 스모크가 아닌 run은 `notes/<단계>/<run-id>.md`의
-   "왜 돌리나"와 "무엇을 바꿨나"가 채워져 있어야 시작한다. 이 두 칸은 실행 **전에** 쓰는
+   "질문"·"판정 기준"·"설정"이 채워져 있어야 시작한다. 이 칸들은 실행 **전에** 쓰는
    칸이라, 시작 시점의 내용을 해시와 함께 `results/<run-id>/note-at-start.md`로 떠 둔다 —
    결과를 보고 가설을 고쳐 쓰면 드러난다.
 2. **리뷰 없이는 다음 단계로 못 넘어간다.** run은 단계로 묶인다. 한 단계 안의 run은
@@ -22,6 +22,10 @@
 폴더·파일·결과 경로에 쓰고 바꾸지 않는다. 사람이 보는 이름은 `stage.json`의 `title`과
 `titles`에서 만든다 — 단계는 `S02 생성기 의존도`, run은 단계 안 순서대로 `S02.2 기법군 빼고
 학습`. MLflow 화면, 노트 제목, 실험 대장에는 이 이름이 나온다.
+
+노트는 MLflow 설명란에 그대로 실려 사람이 읽는다. 그래서 결론이 맨 위에 오고, 실행 전 칸
+(질문·판정 기준·설정)과 실행 후 칸(결론·해석·다음)이 나뉜다. 작성 안내 주석은 화면에 싣지
+않는다(`for_display`). 이 형식 이전의 노트(`왜 돌리나`·`무엇을 바꿨나`)도 그대로 읽는다.
 """
 
 from __future__ import annotations
@@ -39,14 +43,22 @@ from kslab import tracks
 STAGE_FILE = "stage.json"
 STAGE_DOC = "STAGE.md"
 
-WHY = "왜 돌리나"
-CHANGES = "무엇을 바꿨나"
+SUMMARY = "결론"
+QUESTION = "질문"
+CRITERIA = "판정 기준"
+SETUP = "설정"
 INTERPRETATION = "해석"
 NEXT = "다음"
-BEFORE_RUN = (WHY, CHANGES)
-AFTER_RUN = (INTERPRETATION, NEXT)
+BEFORE_RUN = (QUESTION, CRITERIA, SETUP)
+AFTER_RUN = (SUMMARY, INTERPRETATION, NEXT)
 
-# STAGE.md 는 결론이 맨 위에 오는 순서다: 질문 → 답 → 근거 → 다음 → (세부) → 리뷰.
+# 템플릿을 바꾸기 전(S01~S03, P01)의 run 노트. 고쳐 쓰지 않고 이 칸 이름으로 읽는다.
+WHY = "왜 돌리나"
+CHANGES = "무엇을 바꿨나"
+LEGACY_BEFORE_RUN = (WHY, CHANGES)
+LEGACY_AFTER_RUN = (INTERPRETATION, NEXT)
+
+# STAGE.md 는 결론이 맨 위에 오는 순서다: 답 → 질문 → 근거 → 다음 → (세부) → 리뷰.
 STAGE_QUESTION = "질문"
 STAGE_ANSWER = "답"
 STAGE_EVIDENCE = "근거"
@@ -60,40 +72,58 @@ VERDICTS = ("approve", "revise")
 _ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 _COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 _HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
-_COMPARES_RE = re.compile(r"^-\s*비교 대상\s*:\s*(.*)$", re.MULTILINE)
+# 노트 끝의 실행 정보는 `---` 아래에 둔다. 마지막 칸의 내용으로 치지 않는다.
+_RULE_RE = re.compile(r"^-{3,}\s*$", re.MULTILINE)
+# 옛 노트는 `- 비교 대상: x`, 새 노트는 머리 표의 `| 비교 대상 | x |`.
+_COMPARES_RE = re.compile(
+    r"^(?:-\s*비교 대상\s*:|\|\s*비교 대상\s*\|)[ \t]*(.*?)[ \t]*\|?[ \t]*$", re.MULTILINE
+)
 # 단계 계열: S = 1기(S01~S03), P = 난독화 정의 이후 2기(P01~, 로드맵 작업 번호와 같다).
 _STAGE_NUMBER_RE = re.compile(r"^([sp])(\d+)", re.IGNORECASE)
 _SENTENCE_RE = re.compile(r"^(.+?[.?!])(?:\s|$)")
+_EMPTY = "_아직 없음_"
 
 RUN_TEMPLATE = """# {display}
 
-- id: `{run_id}`
-- 단계: `{stage}`
-- 비교 대상:
-- 실행 명령:
+| | |
+|---|---|
+| 비교 대상 | |
+| 바꾼 것 | |
 
-## {why}
-<!-- 실행 전에 쓴다. 가설, 예상하는 결과, 결과가 어떻게 나오면 무엇을 할지. -->
+## {summary}
+<!-- 실행 후. 첫 줄은 "통과", "미달", "판단 보류", "중단" 중 하나와 한 문장 요약.
+그 아래 표: 기준 | 목표 | 결과 | 판정. 숫자는 판정에 쓰인 것만. -->
 
-## {changes}
-<!-- 실행 전에 쓴다. 비교 대상 run 대비 달라지는 것(코드·설정·데이터). -->
+## {question}
+<!-- 실행 전. 이 run으로 알고 싶은 것과 그 이유. 가설이 있으면 여기에. -->
+
+## {criteria}
+<!-- 실행 전에 고정. 기준과 목표(목록이나 표). 그 아래 "예상:"과, 결과가 어떻게 나오면 무엇을 할지. -->
+
+## {setup}
+<!-- 실행 전. 비교 대상에서 바꾼 것, 맞추거나 고정한 것, 데이터, 코드 변경.
+약어는 처음 나올 때 풀어 쓴다. 전체 값은 MLflow Parameters에 있다. -->
 
 ## {interpretation}
-<!-- 실행 후에 쓴다. 가설이 맞았나. 믿을 수 있는 것과 없는 것. -->
+<!-- 실행 후. 가설이 맞았나와 그 근거, 예상과 다른 점, 믿기 어려운 부분. -->
 
 ## {next}
-<!-- 실행 후에 쓴다. 이 결과로 정해진 다음 실험, 그리고 버린 선택지. -->
+<!-- 실행 후. 정해진 다음 실험과 버린 선택지. -->
+
+---
+- 실행 ID: `{run_id}` · 단계 `{stage}`
+- 실행 명령:
 """
 
 STAGE_TEMPLATE = """# {display}
 
-- id: `{stage}`
-
-## {question}
-<!-- 실행 전에 쓴다. 이 단계가 답하려는 질문 한두 문장, 배경, 각 run이 맡는 부분. -->
+- 단계 ID: `{stage}`
 
 ## {answer}
 <!-- 실행 후. 질문에 대한 답 한두 줄. 첫 줄이 실험 대장(EXPERIMENTS.md)에 그대로 들어간다. -->
+
+## {question}
+<!-- 실행 전에 쓴다. 이 단계가 답하려는 질문 한두 문장, 배경, 각 run이 맡는 부분. -->
 
 ## {evidence}
 <!-- 실행 후. 답을 받치는 숫자 3~5개만. 표 칸: 질문 | 기준 | 결과 | 판정 -->
@@ -106,6 +136,22 @@ STAGE_TEMPLATE = """# {display}
 
 ## {reviews}
 """
+
+# 지난 계열은 MLflow에서 묶음 run 하나 아래로 접는다. 평가 데이터가 지금 계열과 달라
+# 숫자를 나란히 놓고 비교하지 않는다.
+STAGE_GROUPS: dict[str, dict[str, str]] = {
+    "S": {
+        "id": "s-series",
+        "display_name": "S 시리즈 · 1기 (이전 평가 데이터)",
+        "note": (
+            "# S 시리즈 · 1기 (이전 평가 데이터)\n\n"
+            "난독화 정의(로드맵 D1~D5)와 평가셋 v1(P01)을 만들기 전의 실험이다(E0~E10, S01~S03). "
+            "1기 생성기(`kslab/obfuscate.py`)가 만든 쌍과 기법별 dev/test로 쟀다.\n\n"
+            "평가 데이터와 지표 정의가 P 계열과 다르므로 숫자를 P 계열과 바로 비교하지 않는다. "
+            "단계별 결론은 실험 대장(`restoration/EXPERIMENTS.md`)에 있다.\n"
+        ),
+    },
+}
 
 
 def _stage_cmd() -> str:
@@ -131,14 +177,32 @@ def validate_id(value: str) -> str:
     return value
 
 
+def _body(text: str) -> str:
+    """칸 본문에서 안내 주석과 `---` 아래 실행 정보를 뺀 것."""
+    return _RULE_RE.split(_COMMENT_RE.sub("", text), 1)[0].strip()
+
+
 def sections(text: str) -> dict[str, str]:
     """`## 제목` 단위로 본문을 자른다. 안내 주석(<!-- -->)은 내용으로 치지 않는다."""
     out: dict[str, str] = {}
     matches = list(_HEADING_RE.finditer(text))
     for index, match in enumerate(matches):
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
-        out[match.group(1)] = _COMMENT_RE.sub("", text[match.end():end]).strip()
+        out[match.group(1)] = _body(text[match.end():end])
     return out
+
+
+def is_legacy(text: str) -> bool:
+    """템플릿을 바꾸기 전 형식의 run 노트인가."""
+    return WHY in sections(text)
+
+
+def before_run(text: str) -> tuple[str, ...]:
+    return LEGACY_BEFORE_RUN if is_legacy(text) else BEFORE_RUN
+
+
+def after_run(text: str) -> tuple[str, ...]:
+    return LEGACY_AFTER_RUN if is_legacy(text) else AFTER_RUN
 
 
 def missing(text: str, names: tuple[str, ...]) -> list[str]:
@@ -154,8 +218,24 @@ def compares_to(text: str) -> str:
 def prereg_digest(text: str) -> str:
     """실행 전에 쓰는 칸들만의 해시. 실행 후 그 칸이 바뀌었는지 가려낸다."""
     found = sections(text)
-    payload = "\n\n".join(f"## {name}\n{found.get(name, '')}" for name in BEFORE_RUN)
+    payload = "\n\n".join(f"## {name}\n{found.get(name, '')}" for name in before_run(text))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def for_display(text: str) -> str:
+    """MLflow 설명란에 싣는 모양. 작성 안내 주석을 지우고 빈 칸에는 '아직 없음'을 적는다."""
+    parts = _HEADING_RE.split(_COMMENT_RE.sub("", text))
+    out = [parts[0]]
+    for heading, body in zip(parts[1::2], parts[2::2]):
+        filled = _RULE_RE.split(body, 1)[0].strip()
+        out.append(f"## {heading}\n" + ("" if filled else f"\n{_EMPTY}\n") + body)
+    return re.sub(r"\n{3,}", "\n\n", "".join(out)).strip() + "\n"
+
+
+def stage_group(stage_id: str) -> dict[str, str] | None:
+    """단계가 속한 묶음(지난 계열). 없으면 None — 단계 run이 실험 바로 아래에 붙는다."""
+    match = _STAGE_NUMBER_RE.match(stage_id)
+    return STAGE_GROUPS.get(match.group(1).upper()) if match else None
 
 
 @dataclass
@@ -302,8 +382,8 @@ def _attach(stage: Stage, run_id: str, title: str = "") -> None:
         path.write_text(
             RUN_TEMPLATE.format(
                 display=stage.run_display_name(run_id), run_id=run_id,
-                stage=stage.stage_id, why=WHY, changes=CHANGES,
-                interpretation=INTERPRETATION, next=NEXT,
+                stage=stage.stage_id, summary=SUMMARY, question=QUESTION,
+                criteria=CRITERIA, setup=SETUP, interpretation=INTERPRETATION, next=NEXT,
             ),
             encoding="utf-8",
         )
@@ -398,14 +478,14 @@ def check_start(
         raise GateError(
             f"run '{run_id}' 의 노트가 없습니다. 먼저 단계에 등록하세요:\n"
             f"    {_stage_cmd()} new <단계-id> --runs {run_id}\n"
-            "그리고 노트의 '왜 돌리나'·'무엇을 바꿨나'를 채운 뒤 다시 실행합니다.\n"
+            f"그리고 노트의 {'·'.join(repr(n) for n in BEFORE_RUN)}을 채운 뒤 다시 실행합니다.\n"
             "(파이프라인 점검용이면 run-id에 'smoke'를 넣으면 게이트를 건너뜁니다.)"
         )
     path = stage.note_path(run_id)
     if not path.exists():
         raise GateError(f"노트 파일이 없습니다: {path}")
     text = path.read_text(encoding="utf-8")
-    empty = missing(text, BEFORE_RUN)
+    empty = missing(text, before_run(text))
     if empty:
         raise GateError(
             f"{path} 의 다음 칸이 비어 있습니다: {', '.join(empty)}\n"
@@ -448,7 +528,7 @@ def review_blockers(stage: Stage, results_dir: Path | None = None) -> list[str]:
     for run_id in stage.runs:
         path = stage.note_path(run_id)
         text = path.read_text(encoding="utf-8") if path.exists() else ""
-        empty = missing(text, AFTER_RUN)
+        empty = missing(text, after_run(text))
         if empty:
             problems.append(f"{run_id}: 노트의 {', '.join(empty)} 칸이 비어 있습니다.")
         if run_id not in finished and not empty:
@@ -491,16 +571,44 @@ def record_review(
     return stage
 
 
+def mark_reformatted(
+    stage_id: str, run_ids: list[str], notes_dir: Path | None = None
+) -> Stage:
+    """옛 형식 노트를 새 템플릿으로 옮겨 적었다고 남긴다.
+
+    칸 이름이 바뀌어 시작 시점 사본과는 해시가 달라진다. 그래서 옮긴 시점의 해시를 새 기준으로
+    잡고, 그 뒤의 수정만 잡아낸다. 시작 시점 원본(`results/<run-id>/note-at-start.md`)은 그대로
+    두므로 옮기면서 내용이 바뀌지 않았는지는 둘을 나란히 보면 된다.
+    """
+    stage = get_stage(stage_id, notes_dir)
+    for run_id in run_ids:
+        if run_id not in stage.runs:
+            raise GateError(f"run '{run_id}' 는 단계 '{stage_id}' 에 없습니다.")
+        text = stage.note_path(run_id).read_text(encoding="utf-8")
+        if is_legacy(text):
+            raise GateError(f"{stage.note_path(run_id)} 는 아직 옛 형식입니다.")
+        stage.data.setdefault("reformatted", {})[run_id] = {
+            "at": _now(), "prereg_sha256": prereg_digest(text),
+        }
+    stage.save()
+    return stage
+
+
 def prereg_changed(stage: Stage, run_id: str, results_dir: Path | None = None) -> bool | None:
-    """실행 전 칸이 실행 뒤에 바뀌었나. 시작 시점 사본이 없으면 None."""
+    """실행 전 칸이 실행 뒤에 바뀌었나. 시작 시점 사본이 없으면 None.
+
+    새 템플릿으로 옮겨 적은 노트는 옮긴 시점의 해시와 비교한다(`mark_reformatted`).
+    """
     base = Path(results_dir) if results_dir else tracks.results_dir()
     snapshot = base / run_id / "note-at-start.md"
     path = stage.note_path(run_id)
     if not snapshot.exists() or not path.exists():
         return None
-    return prereg_digest(snapshot.read_text(encoding="utf-8")) != prereg_digest(
-        path.read_text(encoding="utf-8")
-    )
+    current = prereg_digest(path.read_text(encoding="utf-8"))
+    reformatted = (stage.data.get("reformatted") or {}).get(run_id)
+    if reformatted:
+        return current != reformatted["prereg_sha256"]
+    return prereg_digest(snapshot.read_text(encoding="utf-8")) != current
 
 
 def __getattr__(name: str) -> Path:
