@@ -6,6 +6,14 @@
 
     from kslab import external_gen as X
     X.run("kotka", [X.Item("명작", "yamin", seed=0)])   # -> [{"out": "띵작"}]
+
+준비(출처와 폴더 이름은 `GENERATORS`):
+
+    git clone <source> data/ext/<repo>
+    python -m venv data/ext/<repo>/.venv       # 그 저장소의 의존성을 이 venv에 설치
+
+평가셋에 쓴 각 저장소의 커밋은 평가셋 `header.json`에 남는다. 같은 문장을 다시 만들려면 그 커밋으로 맞춘다.
+KOTOX 1-5(소리 나는 대로 적기)는 `kotox-src/G2P`가 있을 때만 켜진다.
 """
 
 from __future__ import annotations

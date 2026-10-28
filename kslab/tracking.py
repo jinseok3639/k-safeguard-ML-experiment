@@ -24,10 +24,14 @@ MLflow 공식 문서의 구성(실험 = 과제, 부모·자식 run으로 묶기,
 | tags | 판정(status), git 커밋·dirty, 실행 명령, 호스트, 패키지 버전 |
 | datasets | `add_input()`으로 등록한 입력의 이름·SHA-256·경로 (내용은 싣지 않는다) |
 | 자식 run | 모델이 fit()할 때마다 하나. 하이퍼파라미터(params)와 epoch별 `loss` |
-| artifacts | run 디렉터리의 `.md`·`.json` (report, metrics, manifest, 노트)와 `code.diff`·`pip-freeze.txt` |
+| artifacts | run 디렉터리의 `.md`·`.json`·`.png` (report, metrics, manifest, 노트, 그림)와 `code.diff`·`pip-freeze.txt` |
 
 `predictions.jsonl`처럼 공격 원문이 든 산출물은 artifact로 올리지 않는다 — `results/`에만
 남긴다는 기존 규칙을 MLflow 저장소에도 그대로 적용한다.
+
+화면은 env 스크립트를 거친 셸에서 띄운다. 업로드 artifact를 cwd(`mlartifacts/`)가 아니라 저장소 안에 두게 한다.
+
+    mlflow ui --port 5000 --artifacts-destination "$env:KSLAB_ROOT/data/mlflow/served-artifacts"
 
 `MLFLOW_TRACKING_URI`가 없으면(env 스크립트를 안 거친 테스트 등) 아무것도 하지 않는다.
 기록이 실패해도 실험은 멈추지 않는다 — 원본은 언제나 `results/<run-id>/`다.
@@ -53,7 +57,8 @@ MLFLOW_DIR = ROOT / "data" / "mlflow"
 ARTIFACT_DIR = MLFLOW_DIR / "artifacts"
 
 SMOKE_EXPERIMENT = "_smoke"
-ARTIFACT_SUFFIXES = (".md", ".json")
+# 그림(.png)은 러너가 집계 수치로 그린 것만 run 디렉터리에 둔다(문장 원문은 그리지 않는다).
+ARTIFACT_SUFFIXES = (".md", ".json", ".png")
 # 접미사 규칙 밖에서 이름으로 허용하는 것. run.log 는 러너가 원문 예시를 찍을 수 있어 뺀다.
 ARTIFACT_NAMES = ("code.diff", "pip-freeze.txt")
 MAX_ARTIFACT_BYTES = 5 * 1024 * 1024

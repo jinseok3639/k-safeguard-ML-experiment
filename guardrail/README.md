@@ -20,7 +20,7 @@
 
 ## 가드레일 후보
 
-[`CANDIDATES.md`](./CANDIDATES.md)에 기록해 두었다. **아직 선정하지 않았다.**
+[`CANDIDATES.md`](./CANDIDATES.md)에 기록해 둔다.
 
 ## 이 트랙의 규칙
 
@@ -33,12 +33,3 @@
 - ModernBERT 계열 인코더(Horizon-Labs 등)는 Python 3.14에서 `transformers` 5.x에서만 로드된다.
 - 두 계열을 함께 벤치마킹하려면 가상환경을 둘로 나눠야 한다. 정리되기 전까지
   `requirements.txt`에는 가드레일용 패키지를 넣지 않는다.
-
-## 실행
-
-```bash
-source ./env.sh                                   # 저장소 루트에서
-python -m guardrail.exp.stage status
-```
-
-러너는 아직 없다. 가드레일을 선정한 뒤 단계(stage)를 만들고 러너를 추가한다.
