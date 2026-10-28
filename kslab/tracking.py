@@ -29,6 +29,10 @@ MLflow 공식 문서의 구성(실험 = 과제, 부모·자식 run으로 묶기,
 `predictions.jsonl`처럼 공격 원문이 든 산출물은 artifact로 올리지 않는다 — `results/`에만
 남긴다는 기존 규칙을 MLflow 저장소에도 그대로 적용한다.
 
+화면은 env 스크립트를 거친 셸에서 띄운다. 업로드 artifact를 cwd(`mlartifacts/`)가 아니라 저장소 안에 두게 한다.
+
+    mlflow ui --port 5000 --artifacts-destination "$env:KSLAB_ROOT/data/mlflow/served-artifacts"
+
 `MLFLOW_TRACKING_URI`가 없으면(env 스크립트를 안 거친 테스트 등) 아무것도 하지 않는다.
 기록이 실패해도 실험은 멈추지 않는다 — 원본은 언제나 `results/<run-id>/`다.
 """
