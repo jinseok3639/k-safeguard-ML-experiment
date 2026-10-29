@@ -1,6 +1,7 @@
 # 실험 대장 — 가드레일 트랙
 
 실패한 실험도 지우지 않는다. 가드레일 후보와 선정 기준은 [`CANDIDATES.md`](./CANDIDATES.md).
+실험별 코드·기준값·원자료 위치와 이름 대응은 [`INDEX.md`](./INDEX.md), 이름 짓는 규칙은 [`NAMING.md`](./NAMING.md).
 
 ## 단계별 요약
 
