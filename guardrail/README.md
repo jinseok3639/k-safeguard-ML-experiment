@@ -22,6 +22,11 @@
 
 [`CANDIDATES.md`](./CANDIDATES.md)에 기록해 둔다.
 
+## 실험 찾기
+
+진행과 결론은 [`EXPERIMENTS.md`](./EXPERIMENTS.md), 실험별 산출물 위치는 [`INDEX.md`](./INDEX.md),
+단계·run·파일 이름 규칙은 [`NAMING.md`](./NAMING.md).
+
 ## 이 트랙의 규칙
 
 - **8B급 모델은 외부 GPU를 전제로 계획한다.** VRAM 6GB에서는 4비트 양자화로도 올리지 못했다.
