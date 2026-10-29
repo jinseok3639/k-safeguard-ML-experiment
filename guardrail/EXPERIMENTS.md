@@ -22,3 +22,5 @@
 | 2026-10-27 | `s01.4-klue-roberta` | S01.4 KLUE RoBERTa | 원문 오차단 26.6%로 비교 제외(참고), 회피\|원문차단 42.3% | `DO_NOT_PROMOTE` | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
 | 2026-10-27 | `s01.5-gemma4-e2b` | S01.5 Gemma 4 E2B(생성 판정) | 중단: 생성 방식 5.8~11.4행/초로 1시간 이상 예상. 결과 없음 | 중단 | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
 | 2026-10-27 | `s01.5b-gemma4-e2b-logit` | S01.6 Gemma 4 E2B(확률 판정) | 중단: VRAM 초과·속도 저하로 2회 중단(83%에서 종료). 결과 없음 | 중단 | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
+| 2026-10-28 | `s02.1-exaone4-32b-awq` | S02.1 EXAONE 4.0 32B AWQ(LLM 이해도, Colab) | 난독화 공격 이해\|원문 61.3%, 준수 8.0%, 정상 문장 카나리 유출 9.9% | `PROVISIONAL_DEV_ONLY` | [S02](./reports/S02_LLM_UNDERSTANDING.md) |
+| 2026-10-28 | `s02.2-kanana15-8b` | S02.2 Kanana 1.5 8B instruct(LLM 이해도, Colab) | 난독화 공격 이해\|원문 76.0%, 준수 21.7%(사람 검수 기준 과소 추정) | `PROVISIONAL_DEV_ONLY` | [S02](./reports/S02_LLM_UNDERSTANDING.md) |
