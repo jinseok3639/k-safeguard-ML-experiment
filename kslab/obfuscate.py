@@ -8,13 +8,19 @@
   `읽어서`·`값을`·`앉아서`·`삶은`·`닭을`이 전부 변환되지 않았다.
 - `jongseong_cram`: 신규. 저장소에 구현이 아예 없었다.
 
+P01.2에서 통합 분류표(`taxonomy.py`)의 빈 칸 7종을 더했다(반모음·초성 첨가, 자모 복제, 기호 삽입,
+음절 늘이기, 닮은 비한글·한글). 닮은 글자 사전은 KOTOX(MIT)에서 읽는다.
+
 규약은 원본 그대로 `(text, intensity=1.0, seed=0) -> str`. 각 변환은 진입 시 자기
 `random.Random(seed)`를 새로 만들어 서로 RNG 상태를 공유하지 않는다.
 """
 
 from __future__ import annotations
 
+import functools
+import json
 import random
+from pathlib import Path
 
 from . import phonology as PH
 from .jamo import (
@@ -424,6 +430,211 @@ def tensify_rule(text, intensity=1.0, seed=0):
     return _rebuild(text, syl)
 
 
+# --- P01.2 추가: 통합 분류표(`kslab/taxonomy.py`)의 빈 칸 ---
+
+# 반모음 첨가(KOTOX 2-1): 단모음에 y계·w계 반모음을 붙인다.
+_GLIDE = {
+    "ㅏ": ("ㅑ", "ㅘ"), "ㅓ": ("ㅕ", "ㅝ"), "ㅗ": ("ㅛ",), "ㅜ": ("ㅠ",),
+    "ㅐ": ("ㅒ", "ㅙ"), "ㅔ": ("ㅖ", "ㅞ"), "ㅣ": ("ㅟ",),
+}
+_GLIDE_IDX = {JUNG_INDEX[k]: tuple(JUNG_INDEX[v] for v in vs) for k, vs in _GLIDE.items()}
+
+# 초성 첨가(KOTOX 2-3): 소리 없는 초성 ㅇ 자리에 넣는 자음. ㄴ은 실제 ㄴ첨가(솜이불 -> 솜니불)에서 온다.
+_ADDED_ONSET = tuple(CHO_INDEX[c] for c in ("ㅎ", "ㄴ"))
+
+# 기호·이모티콘 삽입(KOTOX 13-2)에 쓰는 보이는 문자.
+_SYMBOLS = (".", ",", "*", "~", "^", "-", "_", "/", "!", "°", "♡", "♥", "☆", "★", "♪", "ㅋ", "ㅎ", "😂", "👍")
+
+# 음절 늘이기(KoNTe 음절 확장): 이중모음을 두 음절로 풀어 쓴다. 화장실 -> 호아장실·호와장실
+_SPLIT_VOWEL = {
+    "ㅘ": "ㅗ", "ㅙ": "ㅗ", "ㅚ": "ㅗ", "ㅝ": "ㅜ", "ㅞ": "ㅜ", "ㅟ": "ㅜ", "ㅢ": "ㅡ",
+    "ㅑ": "ㅣ", "ㅕ": "ㅣ", "ㅛ": "ㅣ", "ㅠ": "ㅣ", "ㅒ": "ㅣ", "ㅖ": "ㅣ",
+}
+_SPLIT_REST = {"ㅘ": "ㅏ", "ㅙ": "ㅐ", "ㅚ": "ㅣ", "ㅝ": "ㅓ", "ㅞ": "ㅔ", "ㅟ": "ㅣ", "ㅢ": "ㅣ"}
+
+# 닮은 글자 사전: KOTOX(MIT, https://github.com/leeyejin1231/KOTOX)의 rules/iconic_dictionary.json.
+# 저장소에 복사하지 않고 data/ext/kotox-src 에 받아 둔 것을 읽는다.
+KOTOX_ICONIC = Path(__file__).resolve().parents[1] / "data" / "ext" / "kotox-src" / "rules" / "iconic_dictionary.json"
+_KOTOX_ERRATA = {("ㄹ", "㉢")}   # ㉢은 ㄷ이다. 사전의 오기
+_VERTICAL_VOWELS = frozenset("ㅗㅛㅜㅠㅡㅚㅙㅞㅟㅝㅘ")   # 자음이 모음 위에 얹히는 모양이라 자음만 바꾸면 못 읽는다
+
+
+def _has_hangul(s):
+    return any(is_syllable(c) or "ㄱ" <= c <= "ㆎ" for c in s)
+
+
+@functools.lru_cache(maxsize=1)
+def _iconic():
+    """사전을 두 갈래로 나눈다.
+
+    foreign = 한글 -> 비한글(ㄱ -> 7, 가 -> ㉮). 되돌릴 답이 하나다.
+    hangul = 한글 -> 한글(대 -> 머, 부부 -> 쀼). 양쪽이 실제 글자라 정상 문장 오변경 위험이 있다.
+    """
+    if not KOTOX_ICONIC.exists():
+        raise FileNotFoundError(
+            f"{KOTOX_ICONIC} 가 없습니다. "
+            "git clone https://github.com/leeyejin1231/KOTOX data/ext/kotox-src 로 받으세요."
+        )
+    raw = json.loads(KOTOX_ICONIC.read_text(encoding="utf-8"))
+
+    def split_values(table):
+        foreign, hangul = {}, {}
+        for key, values in table.items():
+            values = [v for v in values if (key, v) not in _KOTOX_ERRATA]
+            if f := tuple(v for v in values if not _has_hangul(v)):
+                foreign[key] = f
+            if h := tuple(v for v in values if _has_hangul(v)):
+                hangul[key] = h
+        return foreign, hangul
+
+    consonant, _ = split_values(raw["consonant_dict"])
+    vowel, _ = split_values(raw["vowel_dict"])
+    syllable, yamin = split_values(raw["yamin_dict"])
+    return {
+        "consonant": consonant, "vowel": vowel, "syllable": syllable,
+        "hangul": {**yamin, **raw["compression_dict"]},
+    }
+
+
+def semivowel_insert(text, intensity=1.0, seed=0):
+    """반모음 첨가: 단모음에 반모음을 붙인다. 거품 -> 궈퓸, 해줘 -> 햬줘. 길이 보존."""
+    rng = random.Random(seed)
+    syl = _syllables(text)
+    sites = [i for i, s in enumerate(syl) if s and s[1] in _GLIDE_IDX]
+    for i in sorted(_choose(sites, intensity, rng)):
+        syl[i][1] = rng.choice(_GLIDE_IDX[syl[i][1]])
+    return _rebuild(text, syl)
+
+
+def initial_insert(text, intensity=1.0, seed=0):
+    """초성 첨가: 초성 ㅇ 자리에 자음을 넣는다. 많이 -> 많히, 솜이불 -> 솜니불. 길이 보존."""
+    rng = random.Random(seed)
+    syl = _syllables(text)
+    sites = [i for i, s in enumerate(syl) if s and s[0] == _ONSET_IEUNG]
+    for i in sorted(_choose(sites, intensity, rng)):
+        syl[i][0] = rng.choice(_ADDED_ONSET)
+    return _rebuild(text, syl)
+
+
+def jamo_copy(text, intensity=1.0, seed=0):
+    """자모 복제(yu2024 COPY): 이웃 자모를 한 번 더 쓴다. 길이 보존 안 됨.
+
+    - 받침 복제: 받침 없는 음절에 다음 음절의 초성을 받침으로 넣는다. 쓰레기 -> 쓸레기
+    - 모음 늘이기: 음절 뒤에 같은 모음의 'ㅇ+모음' 음절을 붙인다. 쓰레기 -> 쓰레에기
+    받침 복제가 가능한 자리는 둘 중 하나를 고르고, 아니면 모음 늘이기를 한다.
+    """
+    rng = random.Random(seed)
+    syl = _syllables(text)
+
+    def copied_coda(i):
+        nxt = syl[i + 1] if i + 1 < len(syl) else None
+        if syl[i][2] or not nxt or nxt[0] == _ONSET_IEUNG:
+            return None
+        return JONG_INDEX.get(COMPAT_CHO[nxt[0]])   # ㄸ·ㅃ·ㅉ은 받침이 될 수 없다
+
+    pick = _choose([i for i, s in enumerate(syl) if s], intensity, rng)
+    out = []
+    for i, (ch, s) in enumerate(zip(text, syl)):
+        if i not in pick:
+            out.append(ch)
+            continue
+        coda = copied_coda(i)
+        if coda is not None and rng.random() < 0.5:
+            out.append(join(s[0], s[1], coda))
+        else:
+            out.append(ch + join(_ONSET_IEUNG, s[1], 0))
+    return "".join(out)
+
+
+def symbol_insert(text, intensity=1.0, seed=0):
+    """기호·이모티콘 삽입: 음절 뒤에 보이는 기호를 끼운다. 돈을 -> 돈°을. 길이 보존 안 됨.
+
+    zwsp_inject의 보이는 판이다.
+    """
+    rng = random.Random(seed)
+    pick = _pick(text, intensity, rng)
+    out = []
+    for i, ch in enumerate(text):
+        out.append(ch)
+        if i in pick:
+            out.append(rng.choice(_SYMBOLS))
+    return "".join(out)
+
+
+def syllable_extend(text, intensity=1.0, seed=0):
+    """음절 늘이기: 이중모음 음절을 두 음절로 푼다. 화장실 -> 호와장실, 뭐야 -> 무어야. 길이 보존 안 됨.
+
+    뒤 음절의 모음은 원래 이중모음(호와)과 남는 단모음(호아) 중 하나를 고른다. 받침은 뒤 음절로 간다.
+    """
+    rng = random.Random(seed)
+    syl = _syllables(text)
+    sites = [i for i, s in enumerate(syl) if s and COMPAT_JUNG[s[1]] in _SPLIT_VOWEL]
+    pick = _choose(sites, intensity, rng)
+    out = []
+    for i, (ch, s) in enumerate(zip(text, syl)):
+        if i not in pick:
+            out.append(ch)
+            continue
+        vowel = COMPAT_JUNG[s[1]]
+        rest = rng.choice((vowel, _SPLIT_REST[vowel])) if vowel in _SPLIT_REST else vowel
+        out.append(join(s[0], JUNG_INDEX[_SPLIT_VOWEL[vowel]], 0) + join(_ONSET_IEUNG, JUNG_INDEX[rest], s[2]))
+    return "".join(out)
+
+
+def _foreign_options(ch):
+    """음절 하나를 닮은 비한글로 바꾸는 후보들. 바꾸지 않는 자모는 호환 자모로 풀어 쓴다."""
+    table = _iconic()
+    c, j, t = split(ch)
+    cho, jung, jong = COMPAT_CHO[c], COMPAT_JUNG[j], COMPAT_JONG[t]
+    options = list(table["syllable"].get(ch, ()))
+    if jung + jong in table["vowel"]:
+        options += [cho + v for v in table["vowel"][jung + jong]]
+    elif not jong and jung in table["vowel"]:
+        options += [cho + v for v in table["vowel"][jung]]
+    if cho in table["consonant"] and jung not in _VERTICAL_VOWELS:
+        options += [v + jung + jong for v in table["consonant"][cho]]
+    return options
+
+
+def lookalike_foreign(text, intensity=1.0, seed=0):
+    """닮은 비한글 문자: 음절이나 그 자모를 모양이 닮은 비한글로 바꾼다. 가 -> 7ㅏ·㉮, 네 -> ㄴ¶.
+
+    사전은 KOTOX iconic_dictionary(5-2 consonant_swap과 같은 원천). 길이 보존 안 됨.
+    """
+    rng = random.Random(seed)
+    sites = [i for i, ch in enumerate(text) if is_syllable(ch) and _foreign_options(ch)]
+    pick = _choose(sites, intensity, rng)
+    return "".join(rng.choice(_foreign_options(ch)) if i in pick else ch for i, ch in enumerate(text))
+
+
+def lookalike_hangul(text, intensity=1.0, seed=0):
+    """닮은 한글(야민정음): 모양이 닮은 다른 한글로 바꾼다. 대 -> 머, 명 -> 띵, 부부 -> 쀼.
+
+    사전은 KOTOX iconic_dictionary의 한글끼리 쌍과 압축(compression). 두 음절 압축이 먼저 걸린다.
+    """
+    rng = random.Random(seed)
+    table = _iconic()["hangul"]
+    sites, i = [], 0
+    while i < len(text):
+        for width in (2, 1):
+            if text[i:i + width] in table and len(text[i:i + width]) == width:
+                sites.append((i, width))
+                i += width
+                break
+        else:
+            i += 1
+    pick = dict(sorted(_choose(sites, intensity, rng)))
+    out, i = [], 0
+    while i < len(text):
+        if i in pick:
+            out.append(rng.choice(table[text[i:i + pick[i]]]))
+            i += pick[i]
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
 TRANSFORMS = {
     "jamo_decompose": jamo_decompose,
     "chosung": chosung,
@@ -443,10 +654,18 @@ TRANSFORMS = {
     "nasalize": nasalize,
     "lateralize": lateralize,
     "tensify_rule": tensify_rule,
+    # --- P01.2 추가: 통합 분류표의 빈 칸 ---
+    "semivowel_insert": semivowel_insert,
+    "initial_insert": initial_insert,
+    "jamo_copy": jamo_copy,
+    "symbol_insert": symbol_insert,
+    "syllable_extend": syllable_extend,
+    "lookalike_foreign": lookalike_foreign,
+    "lookalike_hangul": lookalike_hangul,
 }
 
 # 'phonetic' = 정규화로 되돌릴 대상이 없는 음운 변형, 'visual' = 정규화-해결 계열 대조군.
-# 저장소의 experiments/benchmark/run_normalizer_evaluation.py:59 FAMILY_MAP 과 같은 축이다.
+# k-safeguard f6ee374의 experiments/benchmark/run_normalizer_evaluation.py:59 FAMILY_MAP 과 같은 축이다.
 FAMILY = {
     "jamo_decompose": "visual",
     "chosung": "visual",
@@ -465,6 +684,13 @@ FAMILY = {
     "nasalize": "phonetic",
     "lateralize": "phonetic",
     "tensify_rule": "phonetic",
+    "semivowel_insert": "phonetic",
+    "initial_insert": "phonetic",
+    "jamo_copy": "phonetic",
+    "syllable_extend": "phonetic",
+    "symbol_insert": "visual",
+    "lookalike_foreign": "visual",
+    "lookalike_hangul": "visual",
 }
 
 # 입력과 출력의 문자 수가 항상 같은 변환. 위치별 슬롯 분류가 성립하는 대상이다.
@@ -473,7 +699,7 @@ LENGTH_PRESERVING = frozenset(
         "chosung", "tensify", "liaison", "palatalize", "jongseong_cram",
         "liaison_correct", "h_deletion", "aspirate", "vowel_confuse",
         "coda_neutralize", "cluster_reduce", "nasalize", "lateralize",
-        "tensify_rule",
+        "tensify_rule", "semivowel_insert", "initial_insert",
     }
 )
 

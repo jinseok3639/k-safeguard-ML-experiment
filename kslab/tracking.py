@@ -7,9 +7,11 @@ MLflow 공식 문서의 구성(실험 = 과제, 부모·자식 run으로 묶기,
 따른다. 화면에서는 세 층으로 보인다.
 
     experiment  restoration                      ← 트랙(과제) 하나
-      └ run     S02 생성기 의존도                 ← 단계(질문 하나). 노트 = STAGE.md
-          └ run S02.2 기법군 빼고 학습            ← 실험 run. 노트 = run 노트
-              └ run bilstm · minus_tensify · seed2026   ← 모델 학습 한 번(loss 곡선)
+      └ run     P04 새 ML 정규화기                ← 단계(질문 하나). 노트 = STAGE.md
+          └ run P04.6 KcELECTRA 태거             ← 실험 run. 노트 = run 노트
+              └ run <모델> · <설정> · seed<n>     ← 모델 학습 한 번(loss 곡선)
+
+지난 계열(S00~S03)의 단계는 계열 run(`S 시리즈 · 1기`) 아래에 한 겹 더 접힌다.
 
 | MLflow | 내용 |
 |---|---|
@@ -22,10 +24,14 @@ MLflow 공식 문서의 구성(실험 = 과제, 부모·자식 run으로 묶기,
 | tags | 판정(status), git 커밋·dirty, 실행 명령, 호스트, 패키지 버전 |
 | datasets | `add_input()`으로 등록한 입력의 이름·SHA-256·경로 (내용은 싣지 않는다) |
 | 자식 run | 모델이 fit()할 때마다 하나. 하이퍼파라미터(params)와 epoch별 `loss` |
-| artifacts | run 디렉터리의 `.md`·`.json` (report, metrics, manifest, 노트)와 `code.diff`·`pip-freeze.txt` |
+| artifacts | run 디렉터리의 `.md`·`.json`·`.png` (report, metrics, manifest, 노트, 그림)와 `code.diff`·`pip-freeze.txt` |
 
 `predictions.jsonl`처럼 공격 원문이 든 산출물은 artifact로 올리지 않는다 — `results/`에만
 남긴다는 기존 규칙을 MLflow 저장소에도 그대로 적용한다.
+
+화면은 env 스크립트를 거친 셸에서 띄운다. 업로드 artifact를 cwd(`mlartifacts/`)가 아니라 저장소 안에 두게 한다.
+
+    mlflow ui --port 5000 --artifacts-destination "$env:KSLAB_ROOT/data/mlflow/served-artifacts"
 
 `MLFLOW_TRACKING_URI`가 없으면(env 스크립트를 안 거친 테스트 등) 아무것도 하지 않는다.
 기록이 실패해도 실험은 멈추지 않는다 — 원본은 언제나 `results/<run-id>/`다.
@@ -44,12 +50,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from kslab import notes
+
 ROOT = Path(__file__).resolve().parents[1]
 MLFLOW_DIR = ROOT / "data" / "mlflow"
 ARTIFACT_DIR = MLFLOW_DIR / "artifacts"
 
 SMOKE_EXPERIMENT = "_smoke"
-ARTIFACT_SUFFIXES = (".md", ".json")
+# 그림(.png)은 러너가 집계 수치로 그린 것만 run 디렉터리에 둔다(문장 원문은 그리지 않는다).
+ARTIFACT_SUFFIXES = (".md", ".json", ".png")
 # 접미사 규칙 밖에서 이름으로 허용하는 것. run.log 는 러너가 원문 예시를 찍을 수 있어 뺀다.
 ARTIFACT_NAMES = ("code.diff", "pip-freeze.txt")
 MAX_ARTIFACT_BYTES = 5 * 1024 * 1024
@@ -64,6 +73,7 @@ _PARAM_BATCH = 100
 DETAIL_KEYS = ("evaluations", "models", "fits")
 MAX_SUMMARY_METRICS = 400
 STAGE_KIND = "stage"
+GROUP_KIND = "group"
 
 
 def tracking_uri() -> str | None:
@@ -326,29 +336,43 @@ def _set_tags(client, run_id: str, tags: dict[str, Any]) -> None:
             client.set_tag(run_id, key, str(value)[:_TAG_LIMIT])
 
 
+def _holder_run(
+    client, experiment: str, kind: str, key: str, value: str, start_time_ms: int | None
+) -> str:
+    """묶음용 run(단계·계열)을 찾거나 만든다. `kslab.kind`와 키 태그 한 쌍으로 찾는다."""
+    experiment_id = _experiment_id(client, experiment)
+    found = client.search_runs(
+        [experiment_id], f"tags.`kslab.kind` = '{kind}' and tags.`{key}` = '{value}'"
+    )
+    if found:
+        return found[0].info.run_id
+    run = client.create_run(experiment_id, start_time=start_time_ms,
+                            tags={"kslab.kind": kind, key: value})
+    # 묶음 run은 실행되는 것이 없다. 화면에서 '실행 중'으로 돌지 않게 닫아 둔다.
+    client.set_terminated(run.info.run_id, "FINISHED", end_time=start_time_ms)
+    return run.info.run_id
+
+
 def ensure_stage_run(
     client, experiment: str, stage_id: str, display_name: str,
     note: str | None = None, tags: dict[str, Any] | None = None,
     start_time_ms: int | None = None,
 ) -> str:
-    """단계를 나타내는 부모 run을 찾거나 만든다. 실험 run은 이 run의 자식으로 붙는다."""
-    experiment_id = _experiment_id(client, experiment)
-    found = client.search_runs(
-        [experiment_id],
-        f"tags.`kslab.kind` = '{STAGE_KIND}' and tags.`kslab.stage` = '{stage_id}'",
-    )
-    if found:
-        run_id = found[0].info.run_id
-    else:
-        run = client.create_run(experiment_id, start_time=start_time_ms, tags={
-            "kslab.kind": STAGE_KIND, "kslab.stage": stage_id,
-        })
-        run_id = run.info.run_id
-        # 단계 run은 묶음일 뿐 실행되는 것이 없다. 화면에서 '실행 중'으로 돌지 않게 닫아 둔다.
-        client.set_terminated(run_id, "FINISHED", end_time=start_time_ms)
+    """단계를 나타내는 부모 run을 찾거나 만든다. 실험 run은 이 run의 자식으로 붙는다.
+
+    지난 계열(`notes.STAGE_GROUPS`)의 단계는 계열 run 아래에 한 겹 더 접힌다.
+    """
+    run_id = _holder_run(client, experiment, STAGE_KIND, "kslab.stage", stage_id, start_time_ms)
     all_tags = {"mlflow.runName": display_name, **(tags or {})}
     if note is not None:
         all_tags["mlflow.note.content"] = note[:_TAG_LIMIT]
+    group = notes.stage_group(stage_id)
+    if group:
+        group_id = _holder_run(client, experiment, GROUP_KIND, "kslab.group", group["id"],
+                               start_time_ms)
+        _set_tags(client, group_id, {"mlflow.runName": group["display_name"],
+                                     "mlflow.note.content": group["note"]})
+        all_tags["mlflow.parentRunId"] = group_id
     _set_tags(client, run_id, all_tags)
     return run_id
 

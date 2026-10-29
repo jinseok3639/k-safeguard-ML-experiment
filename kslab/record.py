@@ -1,6 +1,6 @@
 """run 기록 유틸 — manifest, 결정론적 JSON, 경로 격리 검사.
 
-저장소의 `experiments/benchmark/run_clean_baseline.py`가 쓰는 provenance 관행
+k-safeguard `f6ee374`의 `experiments/benchmark/run_clean_baseline.py`가 쓰는 provenance 관행
 (git commit + dirty, 입력 파일 SHA-256, run-id 덮어쓰기 거부)을 그대로 옮겼다.
 
 경로 격리는 이 샌드박스 고유 규칙이다. `datasets`/`torch`의 기본 캐시는 사용자 홈이라,
@@ -267,7 +267,7 @@ class Run:
                 "compares_to": ticket.compares_to,
                 "prereg_sha256": ticket.prereg_sha256,
             }
-            description = ticket.note_text
+            description = notes.for_display(ticket.note_text)
             note_tags = {
                 "kslab.stage": ticket.stage_id,
                 "kslab.compares_to": ticket.compares_to or None,
@@ -277,7 +277,7 @@ class Run:
             }
             display_name = ticket.run_display_name or run_id
             stage = {"id": ticket.stage_id, "display_name": ticket.stage_display_name,
-                     "note": ticket.stage_note,
+                     "note": notes.for_display(ticket.stage_note),
                      "tags": {"kslab.track": tracks.current(required=False)}}
         tracker = tracking.Tracker.start(
             display_name,

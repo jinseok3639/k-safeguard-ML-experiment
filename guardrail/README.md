@@ -20,7 +20,7 @@
 
 ## 가드레일 후보
 
-[`CANDIDATES.md`](./CANDIDATES.md)에 기록해 두었다. **아직 선정하지 않았다.**
+[`CANDIDATES.md`](./CANDIDATES.md)에 기록해 둔다.
 
 ## 이 트랙의 규칙
 

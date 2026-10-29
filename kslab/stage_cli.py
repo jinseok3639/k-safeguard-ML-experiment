@@ -17,8 +17,8 @@ MLflow와 manifest에 있다). 화면에는 `--title`로 준 한국어 제목이
 
 가드레일 트랙은 `restoration` 자리에 `guardrail`을 쓴다.
 
-흐름: new → 노트의 '왜 돌리나'·'무엇을 바꿨나' 작성 → 러너 실행(같은 단계는 병렬 가능) →
-'해석'·'다음'과 STAGE.md 작성 → show 로 리뷰 → review 로 피드백 기록 → 다음 단계.
+흐름: new → 노트의 '질문'·'판정 기준'·'설정' 작성 → 러너 실행(같은 단계는 병렬 가능) →
+'결론'·'해석'·'다음'과 STAGE.md 작성 → show 로 리뷰 → review 로 피드백 기록 → 다음 단계.
 
 `review`의 --feedback 은 리뷰어의 말을 그대로 적는다. 승인(approve) 전에는 같은
 트랙의 다른 단계 run이 시작되지 않는다. revise 는 피드백만 남기고 단계를 열어 둔다.
@@ -63,7 +63,7 @@ def cmd_new(args) -> None:
                         run_titles=args.run_titles)
     print(f"단계 생성: {stage.display_name}  ({stage.directory})")
     print(f"  {N.STAGE_DOC} 의 '{N.STAGE_QUESTION}' 과 각 run 노트의 "
-          f"'{N.WHY}'·'{N.CHANGES}' 를 채운 뒤 러너를 실행하세요.")
+          f"{'·'.join(repr(n) for n in N.BEFORE_RUN)} 를 채운 뒤 러너를 실행하세요.")
     for run_id in stage.runs:
         print(f"  - {stage.run_display_name(run_id)}: {stage.note_path(run_id)}")
 
@@ -98,7 +98,7 @@ def cmd_status(_args) -> None:
         for run_id in stage.runs:
             path = stage.note_path(run_id)
             text = path.read_text(encoding="utf-8") if path.exists() else ""
-            empty = N.missing(text, N.BEFORE_RUN + N.AFTER_RUN)
+            empty = N.missing(text, N.before_run(text) + N.after_run(text))
             mark = "완료" if run_id in finished else "미완료"
             note = "노트 완성" if not empty else "빈 칸: " + ", ".join(empty)
             print(f"    {stage.run_display_name(run_id)}  {mark}  {note}  ({run_id})")
@@ -138,8 +138,12 @@ def cmd_show(args) -> None:
             f"결과 `{tracks.current()}/results/{run_id}/`"
         )
         changed = N.prereg_changed(stage, run_id)
+        reformatted = (stage.data.get("reformatted") or {}).get(run_id)
+        if reformatted:
+            out.append(f"> 노트를 {reformatted['at']}에 새 템플릿으로 옮겨 적었습니다. "
+                       f"실행 전 칸의 원본은 `{tracks.current()}/results/{run_id}/note-at-start.md`.")
         if changed:
-            out.append("> **주의: '왜 돌리나'/'무엇을 바꿨나'가 실행 시작 뒤에 수정됐습니다.** "
+            out.append("> **주의: 실행 전 칸이 실행 시작 뒤에 수정됐습니다.** "
                        f"시작 시점 원본은 `{tracks.current()}/results/{run_id}/note-at-start.md`.")
         elif changed is None:
             out.append("> 시작 시점 노트 사본이 없어 실행 전 칸의 변경 여부를 확인할 수 없습니다.")
@@ -198,7 +202,7 @@ def _sync(stage: N.Stage) -> None:
     track = tracks.current()
     parent = tracking.sync_stage_run(
         tracking.experiment_name(track), stage.stage_id, stage.display_name,
-        stage.doc_path().read_text(encoding="utf-8"),
+        N.for_display(stage.doc_path().read_text(encoding="utf-8")),
         {"kslab.track": track, "kslab.stage_state": stage.state(), **review_tags},
     )
     print(f"  {stage.display_name}: 단계 run 갱신")
@@ -207,10 +211,10 @@ def _sync(stage: N.Stage) -> None:
         if not path.exists():
             continue
         text = path.read_text(encoding="utf-8")
-        count = tracking.update_run(run_id, text, {
+        count = tracking.update_run(run_id, N.for_display(text), {
             "kslab.stage": stage.stage_id,
             "kslab.compares_to": N.compares_to(text) or None,
-            "note.interpreted": str(not N.missing(text, N.AFTER_RUN)).lower(),
+            "note.interpreted": str(not N.missing(text, N.after_run(text))).lower(),
             **review_tags,
         }, display_name=stage.run_display_name(run_id), parent_run_id=parent)
         print(f"  {stage.run_display_name(run_id)}: MLflow run {count}개 갱신")
@@ -220,7 +224,7 @@ def _sync(stage: N.Stage) -> None:
 
 def cmd_sync(args) -> None:
     if not tracking.enabled():
-        raise SystemExit("MLFLOW_TRACKING_URI 가 없습니다. 먼저 'source ./env.sh' 를 실행하세요.")
+        raise SystemExit("MLFLOW_TRACKING_URI 가 없습니다. 먼저 '. .\\env.ps1' 을 실행하세요.")
     stages = N.load_stages() if args.stage == "all" else [N.get_stage(args.stage)]
     for stage in stages:
         _sync(stage)

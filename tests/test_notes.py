@@ -23,14 +23,46 @@ def _fill(path: Path, names: tuple[str, ...], body: str = "내용") -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def _template(run_id: str = "r", stage: str = "s") -> str:
+    return N.RUN_TEMPLATE.format(
+        display="P01.1 r", run_id=run_id, stage=stage, summary=N.SUMMARY, question=N.QUESTION,
+        criteria=N.CRITERIA, setup=N.SETUP, interpretation=N.INTERPRETATION, next=N.NEXT,
+    )
+
+
 class SectionTest(unittest.TestCase):
     def test_template_comments_do_not_count_as_content(self):
-        text = N.RUN_TEMPLATE.format(
-            display="S01.1 r", run_id="r", stage="s", why=N.WHY, changes=N.CHANGES,
-            interpretation=N.INTERPRETATION, next=N.NEXT,
-        )
+        text = _template()
+        self.assertFalse(N.is_legacy(text))
+        # 마지막 칸 아래의 실행 정보(`---` 밑)도 내용으로 치지 않는다.
         self.assertEqual(N.missing(text, N.BEFORE_RUN + N.AFTER_RUN),
-                         [N.WHY, N.CHANGES, N.INTERPRETATION, N.NEXT])
+                         list(N.BEFORE_RUN + N.AFTER_RUN))
+
+    def test_new_template_compares_to_and_prereg_digest(self):
+        text = _template().replace("| 비교 대상 | |", "| 비교 대상 | `p04.3b-kcelectra-ft` |")
+        self.assertEqual(N.compares_to(text), "p04.3b-kcelectra-ft")
+        self.assertEqual(N.compares_to(_template()), "")
+        filled = text.replace(f"## {N.QUESTION}\n", f"## {N.QUESTION}\n가설\n")
+        later = filled.replace(f"## {N.SUMMARY}\n", f"## {N.SUMMARY}\n통과\n")
+        self.assertEqual(N.prereg_digest(filled), N.prereg_digest(later))
+        self.assertNotEqual(N.prereg_digest(filled),
+                            N.prereg_digest(filled.replace("가설", "결과에 맞춘 가설")))
+
+    def test_display_drops_guidance_and_marks_empty_sections(self):
+        text = _template().replace(f"## {N.QUESTION}\n", f"## {N.QUESTION}\n가설\n")
+        shown = N.for_display(text)
+        self.assertNotIn("<!--", shown)
+        self.assertIn(f"## {N.QUESTION}\n\n가설", shown)
+        self.assertIn(f"## {N.SUMMARY}\n\n_아직 없음_", shown)
+        self.assertIn(f"## {N.NEXT}\n\n_아직 없음_", shown)
+        self.assertIn("- 실행 ID: `r`", shown)
+        # 화면용으로 바꿔도 칸 내용은 그대로다.
+        self.assertEqual(N.sections(shown)[N.QUESTION], "가설")
+
+    def test_stage_groups(self):
+        self.assertEqual(N.stage_group("s02-generator-dependence")["id"], "s-series")
+        self.assertEqual(N.stage_group("s00-legacy")["id"], "s-series")
+        self.assertIsNone(N.stage_group("p04-normalizer"))
 
     def test_compares_to_and_prereg_digest(self):
         text = (f"# r\n- 비교 대상: `e8-mlp-30k`\n\n## {N.WHY}\n가설\n\n## {N.CHANGES}\n변경\n\n"
@@ -40,6 +72,10 @@ class SectionTest(unittest.TestCase):
         self.assertEqual(N.prereg_digest(text), N.prereg_digest(later))
         rewritten = text.replace("가설", "결과에 맞춘 가설")
         self.assertNotEqual(N.prereg_digest(text), N.prereg_digest(rewritten))
+        # 옛 형식 노트는 옛 칸 이름으로 읽는다.
+        self.assertTrue(N.is_legacy(text))
+        self.assertEqual(N.before_run(text), N.LEGACY_BEFORE_RUN)
+        self.assertEqual(N.missing(text, N.after_run(text)), [N.INTERPRETATION, N.NEXT])
 
 
 def _no_mlflow(case: unittest.TestCase) -> None:
@@ -84,7 +120,7 @@ class GateTest(unittest.TestCase):
         self._stage("s1", ["a"], ready=False)
         with self.assertRaises(N.GateError) as caught:
             self._run("a")
-        self.assertIn(N.WHY, str(caught.exception))
+        self.assertIn(N.QUESTION, str(caught.exception))
 
     def test_smoke_run_skips_the_gate(self):
         self._run("pipeline-smoke").finish({})
@@ -153,8 +189,31 @@ class GateTest(unittest.TestCase):
         stage = self._stage("s1", ["a"])
         self._run("a").finish({})
         self.assertFalse(N.prereg_changed(stage, "a", self.results))
-        _fill(stage.note_path("a"), (N.WHY,), "결과에 맞춰 고친 가설")
+        _fill(stage.note_path("a"), (N.QUESTION,), "결과에 맞춰 고친 가설")
         self.assertTrue(N.prereg_changed(stage, "a", self.results))
+
+    def test_reformatted_legacy_note_is_compared_from_the_move(self):
+        stage = self._stage("s1", ["a"])
+        legacy = f"# a\n\n## {N.WHY}\n가설\n\n## {N.CHANGES}\n변경\n\n## {N.INTERPRETATION}\n\n## {N.NEXT}\n"
+        stage.note_path("a").write_text(legacy, encoding="utf-8")
+        self._run("a").finish({})
+        self.assertFalse(N.prereg_changed(stage, "a", self.results))
+
+        new = _template("a", "s1")
+        for name, body in ((N.QUESTION, "가설"), (N.CRITERIA, "기준"), (N.SETUP, "변경")):
+            new = new.replace(f"## {name}\n", f"## {name}\n{body}\n")
+        stage.note_path("a").write_text(new, encoding="utf-8")
+        self.assertTrue(N.prereg_changed(stage, "a", self.results))   # 옮긴 것을 모르면 경고
+        stage = N.mark_reformatted("s1", ["a"], self.notes)
+        self.assertFalse(N.prereg_changed(stage, "a", self.results))
+        _fill(stage.note_path("a"), (N.QUESTION,), "옮긴 뒤 고친 가설")
+        self.assertTrue(N.prereg_changed(stage, "a", self.results))   # 옮긴 뒤 수정은 잡는다
+
+    def test_reformat_refuses_a_legacy_note(self):
+        stage = self._stage("s1", ["a"], ready=False)
+        stage.note_path("a").write_text(f"# a\n\n## {N.WHY}\n가설\n", encoding="utf-8")
+        with self.assertRaises(N.GateError):
+            N.mark_reformatted("s1", ["a"], self.notes)
 
     def test_run_cannot_belong_to_two_stages(self):
         self._stage("s1", ["a"])
@@ -176,8 +235,14 @@ class NamingTest(unittest.TestCase):
         self.assertEqual(stage.run_display_name("s03.2-kotox"), "S03.2 KOTOX 재평가")
         note = stage.note_path("s03.1-sweep").read_text(encoding="utf-8")
         self.assertTrue(note.startswith("# S03.1 임계값 스윕\n"))
-        self.assertIn("- id: `s03.1-sweep`", note)
+        self.assertIn("- 실행 ID: `s03.1-sweep`", note)
         self.assertTrue(stage.doc_path().read_text(encoding="utf-8").startswith("# S03 기법별 임계값"))
+
+    def test_p_series_stage_code(self):
+        stage = N.new_stage("p01-obf-generator", ["p01.1-taxonomy"], self.tmp,
+                            title="난독화 생성기·평가셋", run_titles=["통합 분류표"])
+        self.assertEqual(stage.display_name, "P01 난독화 생성기·평가셋")
+        self.assertEqual(stage.run_display_name("p01.1-taxonomy"), "P01.1 통합 분류표")
 
     def test_untitled_run_falls_back_to_id_and_titles_can_change(self):
         N.new_stage("s04-x", ["r1"], self.tmp, title="제목")
