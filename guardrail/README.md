@@ -33,3 +33,31 @@
 - ModernBERT 계열 인코더(Horizon-Labs 등)는 Python 3.14에서 `transformers` 5.x에서만 로드된다.
 - 두 계열을 함께 벤치마킹하려면 가상환경을 둘로 나눠야 한다. 정리되기 전까지
   `requirements.txt`에는 가드레일용 패키지를 넣지 않는다.
+
+## 실행
+
+```bash
+source ./env.sh                                   # 저장소 루트에서
+python -m guardrail.exp.stage status
+```
+
+### S01 난독화 강건성
+
+kslab 평가셋 v1(난독화 24,444문장 + 원문 695문장)을 가드레일 하나씩에 태운다. 평가셋 전달
+묶음을 `data/evalset/kslab-evalset-v1/`(커밋 제외)에 그대로 복사한 뒤 실행한다.
+
+```bash
+python -m guardrail.exp.run_s01_obf_robustness --run-id s01.1-kanana --guardrail kanana
+```
+
+| `--guardrail` | 모델 | 환경 |
+|---|---|---|
+| `kanana` | `kakaocorp/kanana-safeguard-prompt-2.1b` | `transformers` 4.x |
+| `horizon-base` | `Horizon-Labs/prompt-injection-guard-base` | 4.x(Python 3.10, 4.57.6에서 로드 확인) |
+| `horizon-large` | `Horizon-Labs/prompt-injection-guard-large` | 4.x |
+| `klue-roberta` | `kor-prompt-injection-detection/KLUE_roBERTa_based_model` | 4.x |
+| `gemma4-e2b` | `FrameByFrame/guardrail-korean-gemma-4-E2B` | 5.x(소스 설치) — 가상환경을 따로 둔다 |
+
+모델 id·리비전·백엔드는 `guardrail/scorers.py`의 `GUARDRAILS`에 고정했다. 문장별 점수
+`results/<run-id>/scores.jsonl`은 전달 문서의 `guardrail_scores` 형식이고 P04가 이어 쓴다.
+공격 원문은 들어 있지 않지만 `results/`는 통째로 커밋하지 않는다.
