@@ -10,6 +10,8 @@
 |---|---|---|---|---|---|
 | **S01 난독화 강건성** (`s01-obf-robustness`) | P02 가드레일 다중 | 어떤 난독화 유형이 인젝션 가드레일을 통과하나 | 6 (결과 4, 중단 2) | 리뷰 전 | [S01](./reports/S01_OBF_ROBUSTNESS.md) |
 | **S02 LLM 이해도** (`s02-llm-understanding`) | P03 LLM 강건성 | 난독화된 공격을 LLM이 알아듣나 | 2 + 판정자 | 리뷰 전 | [S02](./reports/S02_LLM_UNDERSTANDING.md) |
+| **P03 Tensor Trust 비밀값 추출** (`p03-secret-extraction`) | P03 LLM 강건성 | 실제 추출 공격이 한국어 LLM과 가드레일에 통하나(원문·번역본) | 10 (`p03.3`~`p03.12`) | 승인됨 | [P03](./reports/P03_SECRET_EXTRACTION.md) |
+| **P03 번역본 난독화 비밀값 추출** (`p03-obf-extraction`) | P03 LLM 강건성 | 번역본 공격을 난독화하면 가드레일 앞단 유출이 오르나 | 6 (`p03.13`~`p03.18`) | 승인됨 | [P03 난독화](./reports/P03_OBF_EXTRACTION.md) |
 
 두 단계 모두 로드맵의 작업 번호(P 시리즈) 대신 `s` 접두어로 열렸다. id는 바꾸지 않고 위 대응만 둔다.
 다음 단계부터는 `p02-…`, `p03-…`를 쓴다.

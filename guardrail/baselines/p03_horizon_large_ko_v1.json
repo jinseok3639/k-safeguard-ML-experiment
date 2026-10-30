@@ -1,0 +1,33 @@
+{
+  "headline": {
+    "attack_blocked": 0.8998242530755711,
+    "code_blocked": 0.1968365553602812
+  },
+  "metrics": {
+    "attack_blocked": {
+      "ci95": [
+        0.8724110994462735,
+        0.9218749860765358
+      ],
+      "k": 512,
+      "n": 569,
+      "rate": 0.8998242530755711,
+      "unparsed": 0
+    },
+    "code_blocked": {
+      "ci95": [
+        0.16624605462852438,
+        0.2314930673376971
+      ],
+      "k": 112,
+      "n": 569,
+      "rate": 0.1968365553602812,
+      "unparsed": 0
+    },
+    "data": "ko",
+    "guardrail": "Horizon-Labs/prompt-injection-guard-large@8ae7c38daa8678ee6543e9b6dafa4ee09fd11337",
+    "rows": 1138,
+    "seconds": 10.6
+  },
+  "run_id": "p03.10-horizon-large-ko"
+}
