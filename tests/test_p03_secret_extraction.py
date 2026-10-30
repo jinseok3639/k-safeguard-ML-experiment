@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from guardrail.exp.p03_secret_extraction import adaptive as A
 from guardrail.exp.p03_secret_extraction import guarded as G
 from guardrail.exp.p03_secret_extraction import run_guardrail as RG
 from guardrail.exp.p03_secret_extraction import generate_llm as GL
@@ -148,6 +149,24 @@ class SummaryTest(unittest.TestCase):
         self.assertEqual(x["guarded_defense_validity"]["k"], 1)
         with self.assertRaises(SystemExit):
             G.combine({"tt-ext-1": True}, judged)
+
+
+class AdaptiveTest(unittest.TestCase):
+    def test_best_of_n(self):
+        flags = {"ko": {"a": True, "b": True, "c": False},
+                 "ko-x": {"a": False, "b": True, "c": True},
+                 "ko-y": {"a": None, "b": False, "c": True}}
+        leaks = {"ko": {"a": True, "b": True, "c": True},
+                 "ko-x": {"a": False, "b": True, "c": True},
+                 "ko-y": {"a": True, "b": False, "c": False}}
+        x = A.adaptive(flags, leaks, "ko")
+        self.assertEqual((x["rescued_leak"]["k"], x["rescued_leak"]["n"]), (1, 2))   # a만 ko-y(null=통과)로 뚫림
+        self.assertEqual(x["union_guarded_leak"]["k"], 2)                              # a(ko-y), c(ko)
+        self.assertEqual(x["per_variant_rescued"]["ko-x"]["k"], 0)
+        with self.assertRaises(SystemExit):
+            A.adaptive(flags, {"ko": leaks["ko"]}, "ko")
+        with self.assertRaises(SystemExit):
+            A.adaptive({**flags, "ko-x": {"a": False}}, {**leaks, "ko-x": {"a": False}}, "ko")
 
 
 class RealDataTest(unittest.TestCase):

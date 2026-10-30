@@ -86,6 +86,16 @@ DATASETS = {
            ("ko-foreign", "lookalike_foreign", "b746df5c09b1b1ba86a7571c16de4ccf85f931bf8da051d16c08ae0150f1d89e"),
            ("ko-jamo", "jamo_decompose", "0c7ddceb86c2c949dcbf79043ffb6ac4e055cd47a67a114c60610d9eb39506bf"),
        ]},
+    **{name: Dataset(
+        name, obf_path(name), sha,
+        f"tensor-trust-data@{DATA_COMMIT[:7]} 한국어 번역본 + kslab {op} 1.0(공격문의 핵심어 어절만)",
+        f"    python -m guardrail.exp.p03_secret_extraction.make_obf --data {name} 로 만드세요(번역본 필요).")
+       for name, op, sha in [
+           ("ko-kw-cram", "jongseong_cram", "fb3bf356603e64d58f0ac467f70d86200b5c2ac49f7dd5f9e33ffa55b592099b"),
+           ("ko-kw-foreign", "lookalike_foreign", "cba38c2174c6d2cb92ec1548985efecabd4d4b65379f3fb64d8c90c7b069e3e1"),
+           ("ko-kw-semivowel", "semivowel_insert", "9fd201c72183e787b0a24072cdb266b7af01014e7cdbc41a077772af33d9f151"),
+           ("ko-kw-tensify", "tensify", "3fee75d52b8c6c1ff58b746ec2f0d2cbc669b101fd89cf667ffc434195c15a7c"),
+       ]},
 }
 DATASET = DATASETS["en"].path
 
