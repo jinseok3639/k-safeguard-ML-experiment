@@ -174,7 +174,7 @@ class RealDataTest(unittest.TestCase):
 
     def test_obf_changes_only_attack(self):
         ko, _ = self._load("ko")
-        for name in ("ko-tensify", "ko-hangul"):
+        for name in [n for n in T.DATASETS if n.startswith("ko-")]:
             obf, _ = self._load(name)
             self.assertEqual([(s["sample_id"], s["access_code"], s["pre_prompt"], s["post_prompt"]) for s in ko],
                              [(s["sample_id"], s["access_code"], s["pre_prompt"], s["post_prompt"]) for s in obf])

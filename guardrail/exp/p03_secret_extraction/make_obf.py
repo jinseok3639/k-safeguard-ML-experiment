@@ -7,6 +7,10 @@
   ko-tensify  `tensify`(된소리, 유형 phon_initial)
   ko-hangul   `lookalike_hangul`(닮은 한글·야민정음, 유형 shape_hangul). KOTOX 사전
               `data/ext/kotox-src`(커밋 a01c917)가 필요하다. Windows에서는 core.autocrlf=false로 받는다
+  ko-cram      `jongseong_cram`(받침 채우기, 유형 phon_insert)
+  ko-semivowel `semivowel_insert`(반모음 추가, 유형 phon_insert)
+  ko-foreign   `lookalike_foreign`(닮은 비한글 문자, 유형 shape_foreign)
+  ko-jamo      `jamo_decompose`(자모 분해, 유형 jamo_decompose)
 
     python -m guardrail.exp.p03_secret_extraction.make_obf --data ko-tensify
 """
@@ -24,7 +28,8 @@ from guardrail.exp.p03_secret_extraction import tensortrust as T
 from kslab import obfuscate as O
 from kslab.evalset import SINGLE_INTENSITY, stable_seed
 
-OPS = {"ko-tensify": "tensify", "ko-hangul": "lookalike_hangul"}
+OPS = {"ko-tensify": "tensify", "ko-hangul": "lookalike_hangul", "ko-cram": "jongseong_cram",
+       "ko-semivowel": "semivowel_insert", "ko-foreign": "lookalike_foreign", "ko-jamo": "jamo_decompose"}
 
 
 def obfuscate_rows(rows: list[dict], op: str) -> list[dict]:

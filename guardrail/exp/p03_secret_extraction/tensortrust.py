@@ -76,6 +76,16 @@ DATASETS = {
         f"tensor-trust-data@{DATA_COMMIT[:7]} 한국어 번역본 + kslab lookalike_hangul 0.5(공격문만)",
         "    python -m guardrail.exp.p03_secret_extraction.make_obf --data ko-hangul 로 만드세요\n"
         "    (번역본과 KOTOX 사전 data/ext/kotox-src@a01c917 필요. Windows는 core.autocrlf=false)."),
+    **{name: Dataset(
+        name, obf_path(name), sha,
+        f"tensor-trust-data@{DATA_COMMIT[:7]} 한국어 번역본 + kslab {op} 0.5(공격문만)",
+        f"    python -m guardrail.exp.p03_secret_extraction.make_obf --data {name} 로 만드세요(번역본 필요).")
+       for name, op, sha in [
+           ("ko-cram", "jongseong_cram", "81caaec2c571f97f3fa7ea8dfc417ee484adb265cdce69553b6afc4f79ccf714"),
+           ("ko-semivowel", "semivowel_insert", "7154c1562adbf16d2c347eab913a6a2e89d431b15ef06d7799cf61f194bfb06d"),
+           ("ko-foreign", "lookalike_foreign", "b746df5c09b1b1ba86a7571c16de4ccf85f931bf8da051d16c08ae0150f1d89e"),
+           ("ko-jamo", "jamo_decompose", "0c7ddceb86c2c949dcbf79043ffb6ac4e055cd47a67a114c60610d9eb39506bf"),
+       ]},
 }
 DATASET = DATASETS["en"].path
 

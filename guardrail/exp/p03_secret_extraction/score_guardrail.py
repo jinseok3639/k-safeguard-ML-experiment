@@ -70,7 +70,7 @@ def score(g: S.Guardrail, rows: list[dict], data: str, batch: int) -> tuple[list
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", choices=sorted(T.DATASETS), required=True,
-                    help="입력 데이터: en(원문), ko(한국어 번역본), ko-tensify·ko-hangul(번역본 난독화)")
+                    help="입력 데이터: en(원문), ko(한국어 번역본), ko-<기법>(번역본 난독화, make_obf.py 참고)")
     ap.add_argument("--guardrail", choices=sorted(S.GUARDRAILS), required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--batch", type=int, default=32)
