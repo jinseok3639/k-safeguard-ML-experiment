@@ -11,7 +11,7 @@
   results/<run-id>/metrics.json     위 세 비율(Wilson 95% 구간), 잘린 응답 수
   baselines/p03_<모델>_v1.json      위 집계만(문장 없음)
 
-    python -m guardrail.exp.p03_secret_extraction.run_llm --run-id p03.6-exaone4-32b-awq \\
+    python -m guardrail.exp.p03_secret_extraction.run_llm --data en --run-id p03.6-exaone4-32b-awq \\
         --generations <받아 온 .gen.jsonl>
 """
 
@@ -35,6 +35,8 @@ EXPERIMENT = "p03_secret_extraction"
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--data", choices=sorted(T.DATASETS), required=True,
+                        help="입력 데이터: en(원문) 또는 ko(한국어 번역본)")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--generations", type=Path, required=True, help="generate_llm.py가 쓴 .gen.jsonl")
     parser.add_argument("--limit", type=int, default=None,
@@ -42,7 +44,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def read_generations(path: Path, expected: list[str]) -> list[dict]:
+def read_generations(path: Path, expected: list[str], data: str | None = None) -> list[dict]:
     with open(path, encoding="utf-8") as f:
         gens = [json.loads(line) for line in f if line.strip()]
     counts = collections.Counter(g["id"] for g in gens)
@@ -52,6 +54,9 @@ def read_generations(path: Path, expected: list[str]) -> list[dict]:
     if dup or missing or extra:
         raise SystemExit(f"생성 파일이 데이터와 맞지 않습니다: 중복 {len(dup)}, 누락 {len(missing)}, "
                          f"데이터에 없는 id {len(extra)}")
+    made_with = {g.get("meta", {}).get("data") for g in gens}
+    if data is not None and made_with != {data}:
+        raise SystemExit(f"생성 파일의 데이터가 {sorted(map(str, made_with))}인데 --data는 {data}입니다")
     models = {g["model"] for g in gens}
     if len(models) != 1:
         raise SystemExit(f"생성 파일에 모델이 여럿입니다: {sorted(models)}")
@@ -70,7 +75,8 @@ def judge(rows: list[dict], gens: list[dict]) -> list[dict]:
     for g in gens:
         r = by_id[g["id"]]
         text = g["response"]
-        rec = {"id": g["id"], "kind": r["kind"], "model": g["model"], "response": text,
+        rec = {"id": g["id"], "kind": r["kind"], "data": g.get("meta", {}).get("data"),
+               "model": g["model"], "response": text,
                "leaked": T.leaked(r["access_code"], text) if r["kind"] == "attack" else None,
                "access_granted": T.access_granted(text) if r["kind"] == "code" else None,
                "meta": g.get("meta", {})}
@@ -102,7 +108,7 @@ def report(model: str, summary: dict, meta: dict) -> str:
     return "\n".join([
         f"# P03 Tensor Trust 비밀값 추출 — LLM `{model}`",
         "",
-        f"- 데이터 Tensor Trust 추출 벤치마크 `{T.DATA_COMMIT[:7]}`, 샘플 {meta['samples']}개"
+        f"- 데이터 `{meta['data']}` ({meta['source']}), 샘플 {meta['samples']}개"
         f"(제외 {meta['excluded']}개: 공격문에 비밀번호가 들어 있음)",
         f"- 생성 파일 `{meta['generations']}` sha256 `{meta['generations_sha256'][:12]}`",
         f"- 최대 생성 길이에서 잘린 응답: 공격 {summary['truncated']['attack']}, 비밀번호 {summary['truncated']['code']}",
@@ -121,11 +127,12 @@ def main() -> None:
     if args.limit and not R.tracking.is_smoke(args.run_id, R.SMOKE_MARKERS):
         raise SystemExit("--limit은 스모크 run(run-id에 smoke)에서만 쓴다.")
 
-    samples, excluded = T.load()
+    data = T.dataset(args.data)
+    samples, excluded = T.load_dataset(data.name)
     if args.limit:
         samples = samples[:args.limit]
     rows = T.inputs(samples)
-    gens = read_generations(args.generations, [r["id"] for r in rows])
+    gens = read_generations(args.generations, [r["id"] for r in rows], data.name)
     model = gens[0]["model"]
     gen_sha = T.sha256(args.generations)
 
@@ -133,7 +140,8 @@ def main() -> None:
         run_id=args.run_id,
         experiment=EXPERIMENT,
         config={
-            "model": model, "data_commit": T.DATA_COMMIT, "samples": len(samples),
+            "model": model, "data": data.name, "data_source": data.source, "data_sha256": data.sha256,
+            "data_commit": T.DATA_COMMIT, "samples": len(samples),
             "excluded_sample_ids": [s["sample_id"] for s in excluded], "limit": args.limit,
             "messages": "system=pre_prompt, user=attack|access_code, user=post_prompt",
             "decoding": "greedy(temperature 0), 입력당 1회",
@@ -143,17 +151,18 @@ def main() -> None:
             "data_license_note": "tensor-trust-data 라이선스 표기 없음(코드 저장소 BSD-2). 문장은 커밋하지 않는다",
         },
     )
-    run.add_input("tensor-trust/extraction_robustness_dataset.jsonl", T.DATASET,
+    run.add_input(f"tensor-trust/{data.path.name}", data.path,
                   rows=len(samples) + len(excluded))
     run.add_input("generations", args.generations, rows=len(gens))
 
-    print(f"[P03] {model}  샘플 {len(samples)}개, 생성 {len(gens)}행 판정", flush=True)
+    print(f"[P03] {model}  데이터 {data.name}  샘플 {len(samples)}개, 생성 {len(gens)}행 판정", flush=True)
     judged = judge(rows, gens)
     run.write_jsonl("responses.jsonl", judged)
     summary = summarize(judged)
-    meta = {"samples": len(samples), "excluded": len(excluded), "generations": args.generations.name,
+    meta = {"data": data.name, "source": data.source,
+            "samples": len(samples), "excluded": len(excluded), "generations": args.generations.name,
             "generations_sha256": gen_sha}
-    metrics = {"model": model, "rows": len(judged), **summary}
+    metrics = {"model": model, "data": data.name, "rows": len(judged), **summary}
     headline = {"leak": summary["leak"]["rate"], "defense_validity": summary["defense_validity"]["rate"],
                 "leak_if_valid": summary["leak_if_valid"]["rate"]}
     run.write_text("report.md", report(model, summary, meta))

@@ -7,12 +7,11 @@
 받아 온 파일로 로컬의 run_llm.py가 한다. 그래서 여기서는 응답과 생성 메타데이터만 남기고 판정하지 않는다.
 이미 쓴 id는 건너뛰므로 Colab 세션이 끊겨도 같은 명령을 다시 돌리면 이어서 한다.
 
-Colab 준비(저장소 루트에서)
-    git clone https://github.com/HumanCompatibleAI/tensor-trust-data data/ext/tensor-trust-data
-    git -C data/ext/tensor-trust-data checkout 747a75e096761ebc01bd3970158827326b4add23
+데이터 준비는 같은 폴더의 README.md를 본다. 어떤 데이터(`--data`)로 만들었는지 각 행에 남기고,
+run_llm.py가 같은 데이터로 판정하는지 확인한다.
 
-    python -m guardrail.exp.p03_secret_extraction.generate_llm --model LGAI-EXAONE/EXAONE-4.0-32B-AWQ \\
-        --revision 1ce84bc --out <Drive>/p03.6-exaone4-32b-awq.gen.jsonl
+    python -m guardrail.exp.p03_secret_extraction.generate_llm --data en \\
+        --model LGAI-EXAONE/EXAONE-4.0-32B-AWQ --revision 1ce84bc --out <Drive>/p03.6-exaone4-32b-awq.gen.jsonl
 """
 
 from __future__ import annotations
@@ -28,11 +27,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 from guardrail.exp.p03_secret_extraction import tensortrust as T
 
 
-def done_ids(out: Path) -> set[str]:
+def done_ids(out: Path, data: str) -> set[str]:
+    """이어서 할 때 이미 쓴 id. en과 ko는 id가 같으므로 다른 데이터로 만든 파일이면 멈춘다."""
     if not out.exists():
         return set()
     with open(out, encoding="utf-8") as f:
-        return {json.loads(line)["id"] for line in f if line.strip()}
+        rows = [json.loads(line) for line in f if line.strip()]
+    other = {r.get("meta", {}).get("data") for r in rows} - {data}
+    if other:
+        raise SystemExit(f"{out}에 다른 데이터({sorted(map(str, other))})로 만든 행이 있습니다. 출력 파일을 따로 두세요.")
+    return {r["id"] for r in rows}
 
 
 def resolve_revision(model: str, revision: str | None) -> str:
@@ -43,6 +47,8 @@ def resolve_revision(model: str, revision: str | None) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--data", choices=sorted(T.DATASETS), required=True,
+                    help="입력 데이터: en(원문) 또는 ko(한국어 번역본)")
     ap.add_argument("--model", required=True)
     ap.add_argument("--revision", default=None)
     ap.add_argument("--out", required=True)
@@ -54,13 +60,13 @@ def main() -> None:
 
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    samples, _ = T.load()
+    samples, _ = T.load_dataset(a.data)
     if a.limit:
         samples = samples[:a.limit]
     rows = T.inputs(samples)
-    done = done_ids(out)
+    done = done_ids(out, a.data)
     todo = [r for r in rows if r["id"] not in done]
-    print(f"{len(rows)}행 중 {len(rows) - len(todo)}행 완료, {len(todo)}행 남음", flush=True)
+    print(f"[{a.data}] {len(rows)}행 중 {len(rows) - len(todo)}행 완료, {len(todo)}행 남음", flush=True)
     if not todo:
         return
 
@@ -89,7 +95,7 @@ def main() -> None:
                     rec = {"id": r["id"], "kind": kind, "model": name, "response": c.text,
                            "meta": {"finish_reason": c.finish_reason, "n_tokens": len(c.token_ids),
                                     "n_prompt_tokens": len(o.prompt_token_ids), "max_tokens": sp.max_tokens,
-                                    "data_commit": T.DATA_COMMIT}}
+                                    "data": a.data, "data_commit": T.DATA_COMMIT}}
                     f.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 f.flush()
                 finished += len(chunk)

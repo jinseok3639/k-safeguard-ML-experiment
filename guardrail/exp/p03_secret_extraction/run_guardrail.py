@@ -6,9 +6,9 @@
 산출물
   results/<run-id>/scores.jsonl   행별 점수. S01 `guardrail_scores`와 같은 형식에 `kind`(attack/code)를 더했다
   results/<run-id>/metrics.json   공격 차단율, 비밀번호 입력 오차단율(Wilson 95% 구간)
-  baselines/p03_<가드레일>_v1.json 위 집계만(문장 없음)
+  baselines/p03_<run 대상>_v1.json 위 집계만(문장 없음). 이름은 run id의 대상 부분에서 딴다
 
-    python -m guardrail.exp.p03_secret_extraction.run_guardrail --run-id p03.3-kanana --guardrail kanana
+    python -m guardrail.exp.p03_secret_extraction.run_guardrail --data en --run-id p03.3-kanana --guardrail kanana
 """
 
 from __future__ import annotations
@@ -31,6 +31,8 @@ EXPERIMENT = "p03_secret_extraction"
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--data", choices=sorted(T.DATASETS), required=True,
+                        help="입력 데이터: en(원문) 또는 ko(한국어 번역본)")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--guardrail", choices=sorted(S.GUARDRAILS), required=True)
     parser.add_argument("--batch", type=int, default=32)
@@ -87,7 +89,7 @@ def report(g: S.Guardrail, summary: dict, meta: dict) -> str:
         "",
         f"- 리비전 `{g.revision}`, 백엔드 `{g.backend}`, 기준값 {g.threshold}",
         f"- 장치 {meta['device']}, 채점 {meta['rows']}행, {meta['seconds']:.0f}초",
-        f"- 데이터 Tensor Trust 추출 벤치마크 `{T.DATA_COMMIT[:7]}`, 샘플 {meta['samples']}개"
+        f"- 데이터 `{meta['data']}` ({meta['source']}), 샘플 {meta['samples']}개"
         f"(제외 {meta['excluded']}개: 공격문에 비밀번호가 들어 있음)",
         "",
         "| 입력 | 차단율 [Wilson 95%] | 판정 실패 |",
@@ -104,7 +106,8 @@ def main() -> None:
     if args.limit and not R.tracking.is_smoke(args.run_id, R.SMOKE_MARKERS):
         raise SystemExit("--limit은 스모크 run(run-id에 smoke)에서만 쓴다.")
 
-    samples, excluded = T.load()
+    data = T.dataset(args.data)
+    samples, excluded = T.load_dataset(data.name)
     if args.limit:
         samples = samples[:args.limit]
     rows = T.inputs(samples)
@@ -117,16 +120,17 @@ def main() -> None:
             "guardrail": g.key, "model": g.model, "revision": g.revision, "backend": g.backend,
             "threshold": g.threshold, "pos_label": g.pos_label, "guardrail_note": g.note,
             "batch": args.batch, "device": device, "limit": args.limit,
+            "data": data.name, "data_source": data.source, "data_sha256": data.sha256,
             "data_commit": T.DATA_COMMIT, "samples": len(samples),
             "excluded_sample_ids": [s["sample_id"] for s in excluded],
             "guardrail_input": "attack 또는 access_code만(앞뒤 방어문 제외)",
             "data_license_note": "tensor-trust-data 라이선스 표기 없음(코드 저장소 BSD-2). 문장은 커밋하지 않는다",
         },
     )
-    run.add_input("tensor-trust/extraction_robustness_dataset.jsonl", T.DATASET,
+    run.add_input(f"tensor-trust/{data.path.name}", data.path,
                   rows=len(samples) + len(excluded))
 
-    print(f"[P03] {g.name}  샘플 {len(samples)}개 → {len(rows)}행  장치 {device}", flush=True)
+    print(f"[P03] {g.name}  데이터 {data.name}  샘플 {len(samples)}개 → {len(rows)}행  장치 {device}", flush=True)
     started = time.time()
     scorer = S.load(g, device)
     scored = score_all(scorer, rows, args.batch)
@@ -139,7 +143,7 @@ def main() -> None:
     out = []
     for r in rows:
         s = scored[r["id"]]
-        rec = {"id": r["id"], "kind": r["kind"], "guardrail": g.name, "score": s["score"],
+        rec = {"id": r["id"], "kind": r["kind"], "data": data.name, "guardrail": g.name, "score": s["score"],
                "flagged": s["flagged"], "threshold": g.threshold}
         if "meta" in s:
             rec["meta"] = s["meta"]
@@ -148,12 +152,14 @@ def main() -> None:
 
     summary = summarize(rows, scored)
     meta = {"device": run.manifest.get("notes", {}).get("gpu", device), "rows": len(rows),
-            "seconds": seconds, "samples": len(samples), "excluded": len(excluded)}
-    metrics = {"guardrail": g.name, "rows": len(rows), "seconds": round(seconds, 1), **summary}
+            "seconds": seconds, "samples": len(samples), "excluded": len(excluded),
+            "data": data.name, "source": data.source}
+    metrics = {"guardrail": g.name, "data": data.name, "rows": len(rows), "seconds": round(seconds, 1), **summary}
     headline = {"attack_blocked": summary["attack_blocked"]["rate"],
                 "code_blocked": summary["code_blocked"]["rate"]}
     run.write_text("report.md", report(g, summary, meta))
-    R.publish_baseline(f"p03_{g.key.replace('-', '_')}_v1.json",
+    target = args.run_id.split("-", 1)[-1].replace("-", "_")
+    R.publish_baseline(f"p03_{target}_v1.json",
                        {"run_id": args.run_id, "metrics": metrics, "headline": headline},
                        run_id=args.run_id)
     run.finish(metrics, headline=headline)

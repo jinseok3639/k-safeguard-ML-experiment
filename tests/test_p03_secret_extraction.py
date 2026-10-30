@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from guardrail.exp.p03_secret_extraction import guarded as G
 from guardrail.exp.p03_secret_extraction import run_guardrail as RG
+from guardrail.exp.p03_secret_extraction import generate_llm as GL
 from guardrail.exp.p03_secret_extraction import run_llm as RL
 from guardrail.exp.p03_secret_extraction import tensortrust as T
 
@@ -75,7 +76,7 @@ class SummaryTest(unittest.TestCase):
         self.rows = T.inputs(SAMPLES[:2])
         responses = {"tt-ext-1": "The password is french toast.", "tt-ext-1/code": "Access Granted",
                      "tt-ext-2": "Access Denied", "tt-ext-2/code": "I cannot help."}
-        self.gens = [{"id": i, "model": "m@x", "response": t, "meta": {"finish_reason": "stop"}}
+        self.gens = [{"id": i, "model": "m@x", "response": t, "meta": {"finish_reason": "stop", "data": "en"}}
                      for i, t in responses.items()]
 
     def test_llm_rates(self):
@@ -95,6 +96,24 @@ class SummaryTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             RL.read_generations(_write(other), ids)
 
+    def test_generation_file_must_match_data_name(self):
+        ids = [r["id"] for r in self.rows]
+        self.assertEqual(len(RL.read_generations(_write(self.gens), ids, "en")), 4)
+        with self.assertRaises(SystemExit):
+            RL.read_generations(_write(self.gens), ids, "ko")
+        # 이어서 생성할 때도 다른 데이터로 만든 파일이면 멈춘다
+        self.assertEqual(len(GL.done_ids(_write(self.gens), "en")), 4)
+        with self.assertRaises(SystemExit):
+            GL.done_ids(_write(self.gens), "ko")
+
+    def test_guarded_runs_must_share_data(self):
+        judged = RL.judge(self.rows, self.gens)
+        self.assertEqual(G.same_data({"llm": judged, "guard": [{"data": "en"}]}), "en")
+        with self.assertRaises(SystemExit):
+            G.same_data({"llm": judged, "guard": [{"data": "ko"}]})
+        with self.assertRaises(SystemExit):
+            G.same_data({"guard": [{"id": "x"}]})
+
     def test_guardrail_rates(self):
         scored = {"tt-ext-1": {"flagged": True}, "tt-ext-1/code": {"flagged": False},
                   "tt-ext-2": {"flagged": None}, "tt-ext-2/code": {"flagged": True}}
@@ -113,13 +132,31 @@ class SummaryTest(unittest.TestCase):
             G.combine({"tt-ext-1": True}, judged)
 
 
-@unittest.skipUnless(T.DATASET.exists(), "Tensor Trust 데이터 없음(data/ext/tensor-trust-data)")
 class RealDataTest(unittest.TestCase):
+    """받아 둔 데이터가 있을 때만 돈다. en과 ko는 쓰는 샘플·제외 샘플·비밀번호가 같아야 한다."""
+
+    def _load(self, name):
+        if not T.DATASETS[name].path.exists():
+            self.skipTest(f"데이터 없음: {T.DATASETS[name].path}")
+        return T.load_dataset(name)
+
     def test_counts_match_note(self):
-        kept, excluded = T.load()
-        self.assertEqual((len(kept), len(excluded)), (569, 1))
-        self.assertEqual(excluded[0]["sample_id"], 76003741327614)
-        self.assertEqual(len(T.inputs(kept)), 1138)
+        for name in T.DATASETS:
+            with self.subTest(data=name):
+                kept, excluded = self._load(name)
+                self.assertEqual((len(kept), len(excluded)), (569, 1))
+                self.assertEqual(excluded[0]["sample_id"], 76003741327614)
+                self.assertEqual(len(T.inputs(kept)), 1138)
+
+    def test_ko_keeps_ids_and_codes(self):
+        en, _ = self._load("en")
+        ko, _ = self._load("ko")
+        self.assertEqual([(s["sample_id"], s["access_code"]) for s in en],
+                         [(s["sample_id"], s["access_code"]) for s in ko])
+
+    def test_unknown_data_name(self):
+        with self.assertRaises(SystemExit):
+            T.dataset("jp")
 
 
 if __name__ == "__main__":
