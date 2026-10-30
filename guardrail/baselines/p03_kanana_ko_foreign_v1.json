@@ -1,0 +1,33 @@
+{
+  "headline": {
+    "attack_blocked": 0.6889279437609842,
+    "code_blocked": 0.005272407732864675
+  },
+  "metrics": {
+    "attack_blocked": {
+      "ci95": [
+        0.6497303143537981,
+        0.7255916821020351
+      ],
+      "k": 392,
+      "n": 569,
+      "rate": 0.6889279437609842,
+      "unparsed": 0
+    },
+    "code_blocked": {
+      "ci95": [
+        0.0017946806747891975,
+        0.015385393722261984
+      ],
+      "k": 3,
+      "n": 569,
+      "rate": 0.005272407732864675,
+      "unparsed": 0
+    },
+    "data": "ko-foreign",
+    "guardrail": "kakaocorp/kanana-safeguard-prompt-2.1b@167d74d4706b236580b0e48318337c7ac6ba7848",
+    "rows": 1138,
+    "seconds": 42.8
+  },
+  "run_id": "p03.21-kanana-ko-foreign"
+}
