@@ -7,11 +7,11 @@ Tensor Trust(ICLR 2024) 추출 벤치마크의 공격을 우리가 쓰는 LLM과
 
 | 하는 일 | 어디서 | 누가 |
 |---|---|---|
-| LLM 응답 생성 (`generate_llm.py`) | Colab GPU | 생성 담당 — 이 문서의 1~3 |
-| 판정·기록 (`run_llm.py`, `run_guardrail.py`, `guarded.py`) | 로컬 | 실험 담당 — 이 문서의 4 |
+| 가드레일 채점 (`score_guardrail.py`), LLM 응답 생성 (`generate_llm.py`) | Colab GPU | 실행 담당 — 이 문서의 1~4 |
+| 판정·기록 (`run_guardrail.py --scores`, `run_llm.py`, `guarded.py`) | 로컬 | 실험 담당 — 이 문서의 5 |
 
-생성 스크립트는 응답만 파일로 쓰고 판정하지 않는다. 판정과 기록은 실험 노트 게이트를 거쳐야 해서 실험 담당이
-받아 온 파일로 따로 한다.
+Colab 스크립트는 점수와 응답만 파일로 쓰고 판정하지 않는다. 판정과 기록은 실험 노트 게이트를 거쳐야 해서 실험
+담당이 받아 온 파일로 따로 한다.
 
 ## 1. 준비 (Colab)
 
@@ -47,7 +47,25 @@ data/ext/tensor-trust-data-ko/benchmarks/extraction-robustness/v1/extraction_rob
 python -m unittest tests.test_p03_secret_extraction -v
 ```
 
-## 2. 응답 생성 (Colab)
+## 2. 가드레일 채점 (Colab)
+
+가드레일 하나 × 데이터 하나마다 한 번 돌린다. 어떤 가드레일을 돌릴지는 실험 담당이 정해 준다. 고를 수 있는 이름은
+`--help`에 나온다.
+
+```bash
+python -u -m guardrail.exp.p03_secret_extraction.score_guardrail --data en --guardrail kanana \
+    --out /content/drive/MyDrive/p03/kanana-en.scores.jsonl
+
+python -u -m guardrail.exp.p03_secret_extraction.score_guardrail --data ko --guardrail horizon-base \
+    --out /content/drive/MyDrive/p03/horizon-base-ko.scores.jsonl
+```
+
+- 출력 파일 이름은 `<가드레일>-<데이터>.scores.jsonl`로 한다.
+- 가드레일에는 공격문과 진짜 비밀번호만 넣는다(앞뒤 방어문은 넣지 않는다). 스크립트에 고정돼 있다.
+- 1138행이라 몇 분 안에 끝난다. 끊기면 처음부터 다시 돌린다. 파일은 다 끝났을 때 한 번에 쓴다.
+- `--batch`는 메모리가 모자랄 때만 줄인다. 점수는 배치 크기와 상관없다.
+
+## 3. 응답 생성 (Colab)
 
 모델 하나 × 데이터 하나마다 한 번 돌린다. 모델과 리비전은 실험 담당이 정해 준 것을 쓴다. 아래 예시는 S02에서 쓴 두
 모델이다.
@@ -71,14 +89,14 @@ python -u -m guardrail.exp.p03_secret_extraction.generate_llm --data ko \
 
 샘플 569개에서 공격 입력과 비밀번호 입력을 하나씩 만들어 파일 하나에 1138행이 생긴다.
 
-## 3. 돌려줄 것
+## 4. 돌려줄 것
 
-- 만든 `.gen.jsonl` 파일들. 열어서 고치지 않는다.
-- 마지막에 찍힌 `완료:` 줄(행 수, 걸린 시간, GPU 이름).
+- 만든 `.scores.jsonl`, `.gen.jsonl` 파일들. 열어서 고치지 않는다.
+- 각 실행 마지막에 찍힌 `완료:` 줄(행 수, 걸린 시간, GPU 이름).
 
 응답 파일에는 공격문과 비밀번호가 들어 있다. 저장소에 커밋하거나 공개된 곳에 올리지 않는다.
 
-## 4. 판정·기록 (로컬, 실험 담당)
+## 5. 판정·기록 (로컬, 실험 담당)
 
 run id는 [`guardrail/NAMING.md`](../../NAMING.md) 규칙을 따르고, 돌리기 전에 실험 노트에 등록돼 있어야 한다.
 각 명령에 그 run이 쓴 데이터를 `--data`로 준다.
@@ -86,12 +104,14 @@ run id는 [`guardrail/NAMING.md`](../../NAMING.md) 규칙을 따르고, 돌리�
 ```bash
 python -u -m guardrail.exp.p03_secret_extraction.run_llm --data en --run-id <run id> \
     --generations <받아 온 .gen.jsonl>
-python -u -m guardrail.exp.p03_secret_extraction.run_guardrail --data en --run-id <run id> --guardrail kanana
+python -u -m guardrail.exp.p03_secret_extraction.run_guardrail --data en --run-id <run id> --guardrail kanana \
+    --scores <받아 온 .scores.jsonl>
 python -u -m guardrail.exp.p03_secret_extraction.guarded --guard <가드레일 run id...> --llm <LLM run id...>
 ```
 
-`run_llm.py`는 생성 파일이 지금 데이터의 id를 빠짐없이 한 번씩 담았는지, `--data`와 같은 데이터로 만들었는지
-확인하고 판정한다. `guarded.py`는 넘긴 run이 모두 같은 데이터일 때만 합친다.
+`run_llm.py`와 `run_guardrail.py --scores`는 받아 온 파일이 지금 데이터의 id를 빠짐없이 한 번씩 담았는지,
+`--data`(가드레일은 `--guardrail`까지)와 같은 조건으로 만들었는지 확인한 뒤 기록한다. `guarded.py`는 넘긴 run이 모두
+같은 데이터일 때만 합친다.
 
 ## 문제가 생기면
 
@@ -101,3 +121,4 @@ python -u -m guardrail.exp.p03_secret_extraction.guarded --guard <가드레일 r
 | `데이터 해시가 기록과 다릅니다` | 다른 버전이거나 고친 파일이다. 전달받은 원본으로 바꾼다 |
 | `다른 데이터(…)로 만든 행이 있습니다` | 출력 파일을 다른 `--data` 실행과 같이 쓰고 있다. 파일 이름을 바꾼다 |
 | `생성 파일이 데이터와 맞지 않습니다` | 생성이 중간에 끝났다. 같은 명령으로 이어서 마친다 |
+| `점수 파일의 data/guardrail가 …` | 다른 데이터나 가드레일로 만든 점수 파일이다. 파일을 다시 확인한다 |

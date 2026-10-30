@@ -1,26 +1,31 @@
-"""p03-secret-extraction 가드레일 run — Tensor Trust 추출 공격을 가드레일 하나에 태운다.
+"""p03-secret-extraction 가드레일 run — 가드레일 하나의 점수를 집계해 run으로 기록한다.
 
-가드레일에는 사용자 입력 자리만 넣는다. 공격 입력은 공격문(`attack`), 정상 대조는 같은 자리에 넣는 진짜
-비밀번호(`access_code`)다. 앞뒤 방어문은 서비스 쪽 텍스트라 넣지 않는다. 채점은 `guardrail/scorers.py` 그대로다.
+점수는 두 길로 얻는다. 가드레일 입력과 채점 방식은 `score_guardrail.py`를 본다.
+  --scores 없음   여기서 바로 채점한다(로컬 GPU)
+  --scores 파일   Colab의 score_guardrail.py가 쓴 점수 파일을 읽는다. 모델을 불러오지 않는다.
+                  파일이 지금 데이터의 id를 빠짐없이 한 번씩 담았는지, --data·--guardrail과 같은지 확인한다
 
 산출물
   results/<run-id>/scores.jsonl   행별 점수. S01 `guardrail_scores`와 같은 형식에 `kind`(attack/code)를 더했다
   results/<run-id>/metrics.json   공격 차단율, 비밀번호 입력 오차단율(Wilson 95% 구간)
   baselines/p03_<run 대상>_v1.json 위 집계만(문장 없음). 이름은 run id의 대상 부분에서 딴다
 
-    python -m guardrail.exp.p03_secret_extraction.run_guardrail --data en --run-id p03.3-kanana --guardrail kanana
+    python -m guardrail.exp.p03_secret_extraction.run_guardrail --data en --run-id p03.3-kanana --guardrail kanana \\
+        [--scores <받아 온 .scores.jsonl>]
 """
 
 from __future__ import annotations
 
 import argparse
+import collections
+import json
 import sys
-import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from guardrail import scorers as S
+from guardrail.exp.p03_secret_extraction import score_guardrail as SG
 from guardrail.exp.p03_secret_extraction import tensortrust as T
 from kslab import record as R
 from kslab.metrics import wilson_interval
@@ -35,32 +40,31 @@ def parse_args() -> argparse.Namespace:
                         help="입력 데이터: en(원문) 또는 ko(한국어 번역본)")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--guardrail", choices=sorted(S.GUARDRAILS), required=True)
-    parser.add_argument("--batch", type=int, default=32)
+    parser.add_argument("--scores", type=Path, default=None, help="score_guardrail.py가 쓴 .scores.jsonl")
+    parser.add_argument("--batch", type=int, default=32, help="여기서 채점할 때만 쓴다")
     parser.add_argument("--limit", type=int, default=None,
                         help="앞에서 n샘플만(스모크 전용. run-id에 smoke가 있어야 한다)")
     return parser.parse_args()
 
 
-def _device() -> str:
-    import torch
-    return "cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 0 else "cpu"
-
-
-def score_all(scorer, rows: list[dict], batch: int) -> dict[str, dict]:
-    """길이순으로 묶어 패딩 낭비를 줄인다. 결과는 id로 돌려준다."""
-    order = sorted(rows, key=lambda r: len(r["text"]))
-    out: dict[str, dict] = {}
-    started = time.time()
-    for i in range(0, len(order), batch):
-        chunk = order[i:i + batch]
-        for r, s in zip(chunk, scorer([r["text"] for r in chunk])):
-            out[r["id"]] = s
-        done = i + len(chunk)
-        if done == len(order) or (i // batch) % 10 == 0:
-            elapsed = time.time() - started
-            print(f"  [score] {done}/{len(order)} ({100 * done / len(order):.0f}%)  "
-                  f"{done / max(elapsed, 1e-9):.1f}행/초  {elapsed:.0f}초", flush=True)
-    return out
+def read_scores(path: Path, expected: list[str], data: str, g: S.Guardrail) -> tuple[list[dict], dict]:
+    """(행별 점수, 채점 환경). 점수 파일이 지금 데이터·가드레일과 맞지 않으면 멈춘다."""
+    with open(path, encoding="utf-8") as f:
+        recs = [json.loads(line) for line in f if line.strip()]
+    counts = collections.Counter(r["id"] for r in recs)
+    dup = [i for i, c in counts.items() if c > 1]
+    missing = [i for i in expected if i not in counts]
+    extra = [i for i in counts if i not in set(expected)]
+    if dup or missing or extra:
+        raise SystemExit(f"점수 파일이 데이터와 맞지 않습니다: 중복 {len(dup)}, 누락 {len(missing)}, "
+                         f"데이터에 없는 id {len(extra)}")
+    for field, want in (("data", data), ("guardrail", g.name)):
+        got = {r.get(field) for r in recs}
+        if got != {want}:
+            raise SystemExit(f"점수 파일의 {field}가 {sorted(map(str, got))}인데 지금 run은 {want}입니다")
+    env = recs[0].get("env", {})
+    order = {i: k for k, i in enumerate(expected)}
+    return [{k: v for k, v in r.items() if k != "env"} for r in sorted(recs, key=lambda r: order[r["id"]])], env
 
 
 def rate(k: int, n: int) -> dict:
@@ -111,15 +115,17 @@ def main() -> None:
     if args.limit:
         samples = samples[:args.limit]
     rows = T.inputs(samples)
+    # 점수 파일이 맞는지는 노트 게이트를 통과하기 전에 확인한다
+    from_file = read_scores(args.scores, [r["id"] for r in rows], data.name, g) if args.scores else None
 
-    device = _device()
     run = R.Run.start(
         run_id=args.run_id,
         experiment=EXPERIMENT,
         config={
             "guardrail": g.key, "model": g.model, "revision": g.revision, "backend": g.backend,
             "threshold": g.threshold, "pos_label": g.pos_label, "guardrail_note": g.note,
-            "batch": args.batch, "device": device, "limit": args.limit,
+            "scored_by": "score_guardrail.py 파일" if args.scores else "이 run",
+            "batch": None if args.scores else args.batch, "limit": args.limit,
             "data": data.name, "data_source": data.source, "data_sha256": data.sha256,
             "data_commit": T.DATA_COMMIT, "samples": len(samples),
             "excluded_sample_ids": [s["sample_id"] for s in excluded],
@@ -130,31 +136,24 @@ def main() -> None:
     run.add_input(f"tensor-trust/{data.path.name}", data.path,
                   rows=len(samples) + len(excluded))
 
-    print(f"[P03] {g.name}  데이터 {data.name}  샘플 {len(samples)}개 → {len(rows)}행  장치 {device}", flush=True)
-    started = time.time()
-    scorer = S.load(g, device)
-    scored = score_all(scorer, rows, args.batch)
-    seconds = time.time() - started
-    if device == "cuda":
-        import torch
-        run.note("gpu", torch.cuda.get_device_name(0))
-        run.note("gpu_peak_mem_gb", round(torch.cuda.max_memory_allocated() / 2**30, 2))
+    print(f"[P03] {g.name}  데이터 {data.name}  샘플 {len(samples)}개 → {len(rows)}행", flush=True)
+    if from_file:
+        recs, env = from_file
+        run.add_input("scores", args.scores, rows=len(recs))
+        print(f"  점수 파일 {args.scores.name} 읽음 (채점 {env.get('gpu', env.get('device', '?'))})", flush=True)
+    else:
+        recs, env = SG.score(g, rows, data.name, args.batch)
+    for key, value in env.items():
+        run.note(key, value)
+    run.write_jsonl("scores.jsonl", recs)
 
-    out = []
-    for r in rows:
-        s = scored[r["id"]]
-        rec = {"id": r["id"], "kind": r["kind"], "data": data.name, "guardrail": g.name, "score": s["score"],
-               "flagged": s["flagged"], "threshold": g.threshold}
-        if "meta" in s:
-            rec["meta"] = s["meta"]
-        out.append(rec)
-    run.write_jsonl("scores.jsonl", out)
-
+    scored = {r["id"]: r for r in recs}
     summary = summarize(rows, scored)
-    meta = {"device": run.manifest.get("notes", {}).get("gpu", device), "rows": len(rows),
+    seconds = env.get("seconds", 0.0)
+    meta = {"device": env.get("gpu", env.get("device", "?")), "rows": len(rows),
             "seconds": seconds, "samples": len(samples), "excluded": len(excluded),
             "data": data.name, "source": data.source}
-    metrics = {"guardrail": g.name, "data": data.name, "rows": len(rows), "seconds": round(seconds, 1), **summary}
+    metrics = {"guardrail": g.name, "data": data.name, "rows": len(rows), "seconds": seconds, **summary}
     headline = {"attack_blocked": summary["attack_blocked"]["rate"],
                 "code_blocked": summary["code_blocked"]["rate"]}
     run.write_text("report.md", report(g, summary, meta))

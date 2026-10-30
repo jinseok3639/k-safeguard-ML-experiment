@@ -121,6 +121,24 @@ class SummaryTest(unittest.TestCase):
         self.assertEqual((s["attack_blocked"]["k"], s["attack_blocked"]["unparsed"]), (1, 1))
         self.assertEqual(s["code_blocked"]["k"], 1)
 
+    def test_score_file_must_match_data_and_guardrail(self):
+        g = next(iter(RG.S.GUARDRAILS.values()))
+        ids = [r["id"] for r in self.rows]
+        recs = [{"id": i, "kind": "attack", "data": "en", "guardrail": g.name, "score": 0.9, "flagged": True,
+                 "threshold": g.threshold, "env": {"device": "cuda", "gpu": "A100", "seconds": 3.0}}
+                for i in reversed(ids)]
+        got, env = RG.read_scores(_write(recs), ids, "en", g)
+        self.assertEqual([r["id"] for r in got], ids)    # 데이터 순서로 되돌린다
+        self.assertNotIn("env", got[0])
+        self.assertEqual(env["gpu"], "A100")
+        for bad in (recs[:3], recs + recs[:1]):
+            with self.assertRaises(SystemExit):
+                RG.read_scores(_write(bad), ids, "en", g)
+        with self.assertRaises(SystemExit):
+            RG.read_scores(_write(recs), ids, "ko", g)
+        with self.assertRaises(SystemExit):
+            RG.read_scores(_write([dict(r, guardrail="other@x") for r in recs]), ids, "en", g)
+
     def test_guarded_blocks_before_llm(self):
         judged = RL.judge(self.rows, self.gens)
         flags = {"tt-ext-1": True, "tt-ext-1/code": False, "tt-ext-2": None, "tt-ext-2/code": False}
