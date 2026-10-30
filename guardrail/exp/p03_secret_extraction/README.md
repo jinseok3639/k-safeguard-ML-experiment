@@ -41,6 +41,16 @@ data/ext/tensor-trust-data-ko/benchmarks/extraction-robustness/v1/extraction_rob
 - `ko`는 공개 저장소가 없다. 전달받은 파일을 위 경로에 둔다.
 - 파일을 고치지 않는다. 스크립트가 sha256을 확인하고, 다르면 멈춘다.
 
+번역본 난독화 데이터(`ko-tensify`, `ko-hangul`)는 번역본에서 만든다. 공격문에만 kslab 기법 하나를 강도 0.5로
+건다. 시드가 고정이라 어디서 만들어도 같은 파일이 나오고 sha256으로 확인한다. `ko-hangul`에는 KOTOX 사전이 필요하다.
+
+```bash
+git clone https://github.com/leeyejin1231/KOTOX data/ext/kotox-src
+git -C data/ext/kotox-src checkout a01c9174390720e4bb83e5c311a4ca71ba5fffcb   # Windows는 먼저 core.autocrlf=false
+python -m guardrail.exp.p03_secret_extraction.make_obf --data ko-tensify
+python -m guardrail.exp.p03_secret_extraction.make_obf --data ko-hangul
+```
+
 제대로 놓였는지는 테스트로 확인한다. 실제 데이터 테스트가 skip 없이 통과하면 된다.
 
 ```bash

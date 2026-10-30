@@ -48,7 +48,7 @@ def resolve_revision(model: str, revision: str | None) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--data", choices=sorted(T.DATASETS), required=True,
-                    help="입력 데이터: en(원문) 또는 ko(한국어 번역본)")
+                    help="입력 데이터: en(원문), ko(한국어 번역본), ko-tensify·ko-hangul(번역본 난독화)")
     ap.add_argument("--model", required=True)
     ap.add_argument("--revision", default=None)
     ap.add_argument("--out", required=True)

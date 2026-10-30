@@ -172,6 +172,14 @@ class RealDataTest(unittest.TestCase):
         self.assertEqual([(s["sample_id"], s["access_code"]) for s in en],
                          [(s["sample_id"], s["access_code"]) for s in ko])
 
+    def test_obf_changes_only_attack(self):
+        ko, _ = self._load("ko")
+        for name in ("ko-tensify", "ko-hangul"):
+            obf, _ = self._load(name)
+            self.assertEqual([(s["sample_id"], s["access_code"], s["pre_prompt"], s["post_prompt"]) for s in ko],
+                             [(s["sample_id"], s["access_code"], s["pre_prompt"], s["post_prompt"]) for s in obf])
+            self.assertGreater(sum(a["attack"] != b["attack"] for a, b in zip(ko, obf)), len(ko) // 2)
+
     def test_unknown_data_name(self):
         with self.assertRaises(SystemExit):
             T.dataset("jp")

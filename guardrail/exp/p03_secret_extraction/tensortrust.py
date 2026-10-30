@@ -35,7 +35,13 @@ from kslab.record import DATA_DIR
 
 REPO_DIR = DATA_DIR / "ext" / "tensor-trust-data"
 KO_DIR = DATA_DIR / "ext" / "tensor-trust-data-ko"
+OBF_DIR = DATA_DIR / "ext" / "tensor-trust-data-ko-obf"
 DATA_COMMIT = "747a75e096761ebc01bd3970158827326b4add23"
+
+
+def obf_path(name: str) -> Path:
+    """번역본 난독화 데이터 파일 경로. make_obf.py가 만든다."""
+    return OBF_DIR / f"extraction_robustness_dataset_{name}.jsonl"
 
 
 @dataclass(frozen=True)
@@ -59,6 +65,17 @@ DATASETS = {
         "90ad491e9ed1b21f04184678c350066f829d6da3e127282fbe2582177a437860",
         f"tensor-trust-data@{DATA_COMMIT[:7]} 한국어 번역본",
         "    번역본은 공개 저장소가 없습니다. 전달받은 파일을 위 경로에 두세요."),
+    "ko-tensify": Dataset(
+        "ko-tensify", obf_path("ko-tensify"),
+        "abb3350ad95fc4c3a19ef46826abed98674647910848a4143d24f0c3f2ae5a42",
+        f"tensor-trust-data@{DATA_COMMIT[:7]} 한국어 번역본 + kslab tensify 0.5(공격문만)",
+        "    python -m guardrail.exp.p03_secret_extraction.make_obf --data ko-tensify 로 만드세요(번역본 필요)."),
+    "ko-hangul": Dataset(
+        "ko-hangul", obf_path("ko-hangul"),
+        "93bf795bc8744a3567f7feae30f30c07274fb055b1149a5c3aa5b70fe04ff544",
+        f"tensor-trust-data@{DATA_COMMIT[:7]} 한국어 번역본 + kslab lookalike_hangul 0.5(공격문만)",
+        "    python -m guardrail.exp.p03_secret_extraction.make_obf --data ko-hangul 로 만드세요\n"
+        "    (번역본과 KOTOX 사전 data/ext/kotox-src@a01c917 필요. Windows는 core.autocrlf=false)."),
 }
 DATASET = DATASETS["en"].path
 
