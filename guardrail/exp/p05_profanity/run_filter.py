@@ -10,6 +10,9 @@
   회복률           복원기 없이 회피된 난독화본 중 복원 후 걸린 비율(--base-run 필요)
   정상 변경률      복원기가 정상 원문을 바꾼 비율(--restorer)
   지연             필터(+복원기) 처리 시간 / 행 수
+  OR 결합          (--base-run이 있을 때) 원문 또는 복원문 중 하나라도 걸리면 차단으로 본 회피율·오탐률
+
+`--axis`로 난독화 축을 고른다: single(기법 하나씩), compose(평가셋 v1 섞기, n=2~4), p04mix(P04 학습 분포 섞기, n=1~4).
 
 산출물: results/<run-id>/scores.jsonl(행별 판정, 문장 없음), metrics.json, report.md,
 baselines/p05_<run 대상>_v1.json(집계만).
@@ -80,6 +83,15 @@ def summarize(rows: list[dict], flagged: dict[str, bool], base: dict[str, bool] 
         "by_technique": {k: rate(v[0], v[1]) for k, v in sorted(by_tech.items())},
     }
     if base is not None:
+        orf = {k: flagged[k] or base[k] for k in flagged}
+        out["or"] = {
+            "clean_tpr": rate(sum(orf[r["id"]] for r in pos), len(pos)),
+            "clean_fpr": rate(sum(orf[r["id"]] for r in neg), len(neg)),
+            "evasion": rate(sum(not orf[r["id"]] for r in ev), len(ev)),
+            "obf_fpr": rate(sum(orf[r["id"]] for r in obf if r["label"] == 0), sum(r["label"] == 0 for r in obf)),
+            "by_type_evasion": {t: rate(sum(not orf[r["id"]] for r in ev if r["type"] == t), sum(r["type"] == t for r in ev))
+                                for t in sorted({r["type"] for r in ev})},
+        }
         lost = [r for r in ev if not base[r["id"]]]
         out["recovery"] = rate(sum(flagged[r["id"]] for r in lost), len(lost))
         out["recovery_by_type"] = {}
@@ -102,6 +114,8 @@ def report(name: str, s: dict, meta: dict) -> str:
              f"| 회피율(전체) | {_pct(s['evasion'])} |", f"| 난독화 오탐률 | {_pct(s['obf_fpr'])} |"]
     if "recovery" in s:
         lines.append(f"| 회복률 | {_pct(s['recovery'])} |")
+        lines += [f"| OR 회피율 | {_pct(s['or']['evasion'])} |", f"| OR 원문 오탐률 | {_pct(s['or']['clean_fpr'])} |",
+                  f"| OR 난독화 오탐률 | {_pct(s['or']['obf_fpr'])} |"]
     if "benign_changed" in s:
         lines.append(f"| 정상 원문 변경률 | {_pct(s['benign_changed'])} |")
     lines += ["", "| 유형 | 회피율 | 난독화 오탐률 |", "|---|---|---|"]
@@ -113,6 +127,7 @@ def parse_args():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--run-id", required=True)
     ap.add_argument("--filter", choices=sorted(F.FILTERS), required=True)
+    ap.add_argument("--axis", choices=sorted(D.AXES), default="single", help="난독화 축")
     ap.add_argument("--restorer", default=None, help="복원기 이름(RESTORERS)")
     ap.add_argument("--base-run", default=None, help="같은 필터의 복원기 없는 run id(회복률 계산)")
     ap.add_argument("--limit", type=int, default=None, help="스모크 run에서만: 앞에서 n문장")
@@ -127,7 +142,7 @@ def main() -> None:
         raise SystemExit(f"모르는 복원기 '{a.restorer}'. 등록된 것: {', '.join(RESTORERS) or '없음'}")
     flt = F.FILTERS[a.filter]
     sources = D.load()[:a.limit] if a.limit else D.load()
-    rows = sources + D.variants(sources)
+    rows = sources + D.AXES[a.axis](sources)
     base = None
     if a.base_run:
         with open(R.RESULTS_DIR / a.base_run / "scores.jsonl", encoding="utf-8") as f:
@@ -139,7 +154,9 @@ def main() -> None:
         "filter": flt.key, "filter_model": flt.name, "filter_revision": flt.version, "filter_rule": flt.rule,
         "restorer": a.restorer, "base_run": a.base_run, "limit": a.limit,
         "data_source": D.SOURCE, "data_sha256": D.SHA256, "sources": len(sources), "variants": len(rows) - len(sources),
-        "obfuscation": "kslab 내부 기법 24개 각각, evalset single 축 강도·시드", "data_license_note": "MIT. 문장은 커밋하지 않는다",
+        "axis": a.axis, "obfuscation": {"single": "kslab 내부 기법 24개 각각, evalset single 축 강도·시드",
+                                        "compose": "evalset compose 축(n=2~4, 강도 0.3, 사람형·자동형, 초성체 제외)",
+                                        "p04mix": "kslab.train_data.variant_steps(n=1~4, 복원 대상 9유형, 강도 0.3·0.5·0.8)"}[a.axis], "data_license_note": "MIT. 문장은 커밋하지 않는다",
     })
     run.add_input("curse-detection/dataset.txt", D.DATASET, rows=len(sources))
     print(f"[P05] {flt.name}  복원기 {a.restorer or '없음'}  원문 {len(sources)} + 난독화 {len(rows) - len(sources)}행", flush=True)
@@ -190,6 +207,7 @@ def main() -> None:
     headline = {"clean_tpr": s["clean_tpr"]["rate"], "clean_fpr": s["clean_fpr"]["rate"], "evasion": s["evasion"]["rate"]}
     if "recovery" in s:
         headline["recovery"] = s["recovery"]["rate"]
+        headline["or_evasion"] = s["or"]["evasion"]["rate"]
     run.write_text("report.md", report(flt.name, s, meta))
     target = a.run_id.split("-", 1)[-1].replace("-", "_")
     name = f"p05_{target}_v1.json"
