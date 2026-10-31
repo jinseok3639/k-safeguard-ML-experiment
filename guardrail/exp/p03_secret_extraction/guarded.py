@@ -5,7 +5,8 @@ LLM을 다시 돌리지 않는다. flagged가 null(판정 실패)인 입력은 �
   앞단 유출률       공격 입력 중 가드레일 통과 & 유출
   앞단 방어 유효성  비밀번호 입력 중 가드레일 통과 & Access Granted. 정상 사용자가 막히면 떨어진다
 
-결과는 표로 출력하고 집계만 baselines/p03_guarded_<데이터>_v1.json에 쓴다. 입력은 run id로 받아
+결과는 표로 출력하고 집계만 baselines/p03_guarded_<데이터>_v<판>.json에 쓴다. 기준값은 덮어쓰지 않으므로
+같은 데이터로 다른 run 묶음을 합칠 때는 --version을 올린다. 입력은 run id로 받아
 results/<run-id>/의 scores.jsonl·responses.jsonl을 읽는다. 넘긴 run이 모두 같은 데이터(en/ko)여야 한다.
 
     python -m guardrail.exp.p03_secret_extraction.guarded --guard p03.3-kanana p03.4-horizon-base \\
@@ -68,6 +69,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--guard", nargs="+", required=True, help="가드레일 run id")
     ap.add_argument("--llm", nargs="+", required=True, help="LLM run id")
+    ap.add_argument("--version", type=int, default=1, help="기준값 판. 같은 데이터의 이전 판이 있으면 올린다")
     a = ap.parse_args()
 
     results = R.RESULTS_DIR
@@ -87,10 +89,13 @@ def main() -> None:
             print(f"{'':<24} {g:<22} {_pct(x['attack_passed']):>16} {_pct(x['guarded_leak']):>16} "
                   f"{_pct(x['guarded_defense_validity']):>16}")
 
-    R.publish_baseline(f"p03_guarded_{data}_v1.json",
+    name = f"p03_guarded_{data}_v{a.version}.json"
+    if (R.BASELINES_DIR / name).exists():
+        raise SystemExit(f"기준값은 덮어쓰지 않습니다: baselines/{name}. --version을 올리세요")
+    R.publish_baseline(name,
                        {"guard_runs": a.guard, "llm_runs": a.llm, "data": data, "data_commit": T.DATA_COMMIT,
                         "rule": "flagged=true면 LLM에 닿지 않음, null은 통과", "pairs": out})
-    print(f"\nbaselines/p03_guarded_{data}_v1.json 저장")
+    print(f"\nbaselines/{name} 저장")
 
 
 if __name__ == "__main__":

@@ -10,6 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from guardrail.exp.p03_secret_extraction import adaptive as A
 from guardrail.exp.p03_secret_extraction import guarded as G
 from guardrail.exp.p03_secret_extraction import run_guardrail as RG
 from guardrail.exp.p03_secret_extraction import generate_llm as GL
@@ -150,6 +151,24 @@ class SummaryTest(unittest.TestCase):
             G.combine({"tt-ext-1": True}, judged)
 
 
+class AdaptiveTest(unittest.TestCase):
+    def test_best_of_n(self):
+        flags = {"ko": {"a": True, "b": True, "c": False},
+                 "ko-x": {"a": False, "b": True, "c": True},
+                 "ko-y": {"a": None, "b": False, "c": True}}
+        leaks = {"ko": {"a": True, "b": True, "c": True},
+                 "ko-x": {"a": False, "b": True, "c": True},
+                 "ko-y": {"a": True, "b": False, "c": False}}
+        x = A.adaptive(flags, leaks, "ko")
+        self.assertEqual((x["rescued_leak"]["k"], x["rescued_leak"]["n"]), (1, 2))   # a만 ko-y(null=통과)로 뚫림
+        self.assertEqual(x["union_guarded_leak"]["k"], 2)                              # a(ko-y), c(ko)
+        self.assertEqual(x["per_variant_rescued"]["ko-x"]["k"], 0)
+        with self.assertRaises(SystemExit):
+            A.adaptive(flags, {"ko": leaks["ko"]}, "ko")
+        with self.assertRaises(SystemExit):
+            A.adaptive({**flags, "ko-x": {"a": False}}, {**leaks, "ko-x": {"a": False}}, "ko")
+
+
 class RealDataTest(unittest.TestCase):
     """받아 둔 데이터가 있을 때만 돈다. en과 ko는 쓰는 샘플·제외 샘플·비밀번호가 같아야 한다."""
 
@@ -174,7 +193,7 @@ class RealDataTest(unittest.TestCase):
 
     def test_obf_changes_only_attack(self):
         ko, _ = self._load("ko")
-        for name in ("ko-tensify", "ko-hangul"):
+        for name in [n for n in T.DATASETS if n.startswith("ko-")]:
             obf, _ = self._load(name)
             self.assertEqual([(s["sample_id"], s["access_code"], s["pre_prompt"], s["post_prompt"]) for s in ko],
                              [(s["sample_id"], s["access_code"], s["pre_prompt"], s["post_prompt"]) for s in obf])

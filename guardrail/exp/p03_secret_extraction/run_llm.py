@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--data", choices=sorted(T.DATASETS), required=True,
-                        help="입력 데이터: en(원문), ko(한국어 번역본), ko-tensify·ko-hangul(번역본 난독화)")
+                        help="입력 데이터: en(원문), ko(한국어 번역본), ko-<기법>(번역본 난독화, make_obf.py 참고)")
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--generations", type=Path, required=True, help="generate_llm.py가 쓴 .gen.jsonl")
     parser.add_argument("--limit", type=int, default=None,
