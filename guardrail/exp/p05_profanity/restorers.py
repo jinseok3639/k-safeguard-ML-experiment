@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
@@ -41,9 +42,32 @@ def load_p04_3b(device: str = "cuda"):
     return model
 
 
+def lenient_key(text: str) -> list[str]:
+    """문장부호를 지우고 공백으로 나눈 어절. P04.3b 러너와 같은 규칙(복원기 트랙 모듈을 import하면 기록 트랙이 바뀌어 옮겨 둔다)."""
+    return "".join(ch for ch in text if not unicodedata.category(ch).startswith("P")).split()
+
+
+def mutation(model, texts: list[str], rows: list, thr: float) -> float:
+    outs = [model.decide(t, row, thr) for t, row in zip(texts, rows)]
+    return sum(lenient_key(o) != lenient_key(t) for o, t in zip(outs, texts)) / len(texts)
+
+
+def _cal(model, texts: list[str], rows: list, budget: float) -> float:
+    """완화 기준 오변경이 `budget` 이하가 되는 가장 낮은 임계값(P04.3b 러너와 같은 이분 탐색)."""
+    if mutation(model, texts, rows, 0.0) <= budget:
+        return 0.0
+    lo, hi = 0.0, 1.0 + 1e-6
+    for _ in range(30):
+        mid = (lo + hi) / 2
+        if mutation(model, texts, rows, mid) <= budget:
+            hi = mid
+        else:
+            lo = mid
+    return hi
+
+
 def calibrate(model) -> tuple[float, float]:
     import json
-    from restoration.exp.run_p04_3b_pretrained_tagger import calibrate as _cal, mutation
 
     # 평가셋 v1 원문 695(`kslab.evalset.load_sources`와 같은 문장). 이 PC에는 공개 원문 파일 대신 평가셋 인계본의
     # clean 레코드를 둔 `data/clean.jsonl`이 있다
@@ -53,7 +77,7 @@ def calibrate(model) -> tuple[float, float]:
         raise SystemExit(f"{CLEANS}: 원문 695개가 아닙니다({len(cleans)})")
     rows = model.predict(cleans, batch_size=64)
     thr = _cal(model, cleans, rows, BENIGN_BUDGET)
-    return thr, mutation(model, cleans, rows, thr)[0]
+    return thr, mutation(model, cleans, rows, thr)
 
 
 def p04_3b():
