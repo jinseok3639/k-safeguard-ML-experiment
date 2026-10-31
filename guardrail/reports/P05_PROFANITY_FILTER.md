@@ -8,6 +8,17 @@
 > 통과**했다. 자모 분해 정상 문장 오탐도 45%→12%로 줄인다. **규칙 필터 앞에서는 미달**이다. 복원 범위 밖인
 > 초성체를 지워 korcen이 잡던 것을 놓치게 한다. 지연은 GPU p95 12.1ms로 기준 10ms를 넘는다.
 
+## 그림
+
+발표용 그림은 `reports/figures/p05/`에 있다(`exp/p05_profanity/make_figures.py`로 다시 만든다).
+
+| 그림 | 내용 |
+|---|---|
+| [1](./figures/p05/1_evasion_by_type.png) | 유형별 회피율: korcen, kor_unsmile, kor_unsmile + 복원기 |
+| [2](./figures/p05/2_false_positive.png) | 난독화된 정상 문장 오탐 |
+| [3](./figures/p05/3_restorer_effect.png) | 복원기 결합 방식별 전체 회피율(OR은 사후 분석) |
+| [4](./figures/p05/4_recovery_by_type.png) | 유형별 회복률(kor_unsmile) |
+
 ## 질문
 
 1. 공개 한국어 욕설 필터는 난독화 유형별로 얼마나 뚫리는가
