@@ -93,3 +93,27 @@ ax.set_title("우리 라이브러리는 필터가 놓친 욕설을 복원 대상
 fig.text(0.01, 0.005, "우리 라이브러리 복원 범위: 초성체는 제외, 닮은 외국문자·야민정음·음절 늘이기는 경계(복원 여부 미정). 나머지가 복원 대상", fontsize=8.5, color=INK2)
 fig.tight_layout(rect=(0, 0.03, 1, 1)); fig.savefig(OUT + "4_recovery_by_type.png", dpi=200)
 print("ok")
+
+# 5. 섞은 기법 수 n에 따른 회피율(필터 2 × 난독화 축 2)
+fig, axes = plt.subplots(2, 2, figsize=(10, 7), sharey=True)
+AXN = {"p04mix": "복원기 학습 분포 섞기(상한)", "compose": "평가셋 섞기(경계 유형 포함)"}
+for i, (fk, fname) in enumerate((("kor_unsmile", "kor_unsmile(ML)"), ("korcen", "korcen(규칙)"))):
+    for j, axn in enumerate(("p04mix", "compose")):
+        ax = axes[i][j]; style(ax); ax.yaxis.grid(True, color=GRID, lw=0.8); ax.xaxis.grid(False)
+        a, r = load(f"p05_{fk}_{axn}_v1.json"), load(f"p05_{fk}_{axn}_restored_v1.json")
+        ns = [k for k in a["by_type"] if a["by_type"][k]["evasion"]["n"] > 100]
+        xs = [int(k.split("=")[1]) for k in ns]
+        for vals, c, nm in (([a["by_type"][k]["evasion"]["rate"] for k in ns], C1, "필터 단독"),
+                            ([r["by_type"][k]["evasion"]["rate"] for k in ns], C2, "+ 우리 라이브러리(복원문만 검사)"),
+                            ([r["or"]["by_type_evasion"][k]["rate"] for k in ns], C3, "+ 우리 라이브러리(원문 OR 복원문)")):
+            ys = [100 * v for v in vals]
+            ax.plot(xs, ys, color=c, lw=2, marker="o", ms=7, mec=SURF, mew=2, label=nm)
+            ax.text(xs[-1] + 0.12, ys[-1], f"{ys[-1]:.0f}%", va="center", fontsize=9, color=INK)
+        ax.set_xticks(xs); ax.set_xticklabels([f"{x}개" for x in xs], color=INK2); ax.set_xlim(xs[0] - 0.3, xs[-1] + 0.6)
+        ax.set_title(f"{fname} · {AXN[axn]}", loc="left", fontsize=10.5, color=INK)
+        if j == 0: ax.set_ylabel("회피율(%)", color=INK2)
+handles, labels = axes[0][0].get_legend_handles_labels()
+fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.035), ncol=3, frameon=False, fontsize=10, labelcolor=INK)
+fig.suptitle("기법을 섞을수록 공개 필터는 더 뚫린다 — 우리 라이브러리를 OR로 붙이면 회피가 30~58% 준다", x=0.01, ha="left", fontsize=12.5, color=INK)
+fig.text(0.01, 0.005, "x축: 한 문장에 섞은 난독화 기법 수. 초성체 제외. OR 결합은 실행 전 등록한 구성(원문 오탐 증가 0.5%p 이하)", fontsize=8.5, color=INK2)
+fig.tight_layout(rect=(0, 0.09, 1, 0.95)); fig.savefig(OUT + "5_mixed_by_n.png", dpi=200)
