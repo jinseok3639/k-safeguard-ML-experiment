@@ -30,16 +30,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from guardrail.exp.p05_profanity import data as D
 from guardrail.exp.p05_profanity import filters as F
+from guardrail.exp.p05_profanity import restorers as RS
 from kslab import record as R
 from kslab.metrics import wilson_interval
 
 EXPERIMENT = "guardrail-p05-profanity-filter"
-RESTORERS: dict = {}   # 복원기 이름 -> () -> (texts -> texts). 팀 복원기가 들어오면 등록한다
+RESTORERS = RS.RESTORERS
+LATENCY_SAMPLE = 200
 
 
 def rate(k: int, n: int) -> dict:
     lo, hi = wilson_interval(k, n)
     return {"k": k, "n": n, "rate": k / n if n else None, "ci95": [lo, hi]}
+
+
+def single_latency(restore, texts: list[str]) -> dict:
+    """문장 하나씩 넣었을 때 복원기 지연(ms). 실시간 채팅처럼 메시지가 하나씩 들어오는 경우다."""
+    import numpy as np
+    times = []
+    for t in texts:
+        t0 = time.perf_counter()
+        restore([t])
+        times.append(1000 * (time.perf_counter() - t0))
+    return {"n": len(texts), "p50_ms": float(np.percentile(times, 50)), "p95_ms": float(np.percentile(times, 95))}
 
 
 def summarize(rows: list[dict], flagged: dict[str, bool], base: dict[str, bool] | None = None) -> dict:
@@ -136,6 +149,8 @@ def main() -> None:
     restored = texts
     if a.restorer:
         restore = RESTORERS[a.restorer]()
+        for k, v in RS.INFO.items():
+            run.note(f"restorer_{k}", v)
         restore(texts[:8])                 # 첫 호출 준비(모델 올리기)는 지연에서 뺀다
         t0 = time.perf_counter()
         restored = restore(texts)
@@ -146,6 +161,9 @@ def main() -> None:
     flags = fn(restored)
     seconds = restore_sec + time.perf_counter() - t0
     run.note("restore_ms_per_row", 1000 * restore_sec / len(rows))
+    single = single_latency(restore, [r["text"] for r in rows if r["technique"]][::430][:LATENCY_SAMPLE]) if a.restorer else None
+    if single:
+        run.note("restorer_single_latency", single)
     flagged = {r["id"]: bool(f) for r, f in zip(rows, flags)}
 
     s = summarize(rows, flagged, base)
@@ -166,7 +184,8 @@ def main() -> None:
                                       "technique": r["technique"], "flagged": flagged[r["id"]],
                                       **({"changed": restored[i] != texts[i]} if a.restorer else {})}
                                      for i, r in enumerate(rows)])
-    metrics = {"filter": flt.key, "restorer": a.restorer, "rows": len(rows), "seconds": seconds,
+    metrics = {"filter": flt.key, "restorer": a.restorer, "restorer_info": dict(RS.INFO) if a.restorer else None,
+               "restorer_single_latency_gpu": single, "rows": len(rows), "seconds": seconds,
                "ms_per_row": meta["ms_per_row"], "device": device, **s}
     headline = {"clean_tpr": s["clean_tpr"]["rate"], "clean_fpr": s["clean_fpr"]["rate"], "evasion": s["evasion"]["rate"]}
     if "recovery" in s:
