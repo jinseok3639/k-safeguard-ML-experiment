@@ -5,7 +5,7 @@
 p05-mixed-obfuscation)이고, 지표는 난독화된 욕설 중 차단된 비율(감지율)이다. 모든 수치는 results/p05.*/scores.jsonl에서
 다시 계산한다.
 
-데이터셋 표기(발표용): 데이터셋 1 = p04mix(복원 대상 9유형만 섞음), 데이터셋 2 = compose(경계 유형 포함 섞음).
+데이터셋 표기(발표용): 데이터셋 1 = p04mix(복원 대상 9유형만 복합 적용), 데이터셋 2 = compose(경계 유형 포함 복합 적용).
 
     python guardrail/exp/p05_profanity/make_slides.py   # 저장소 루트에서 -> reports/figures/p05/slide_*.png, slides_text.md
 """
@@ -37,7 +37,7 @@ RUNS = {  # (필터, 데이터) -> (단독 run, 복원기 run)
     ("korcen", "single"): ("p05.1-korcen", "p05.3-korcen-restored"),
     ("korcen", "d2"): ("p05.9-korcen-compose", "p05.11-korcen-compose-restored"),
 }
-DATA = {"single": "단일 난독화", "d1": "섞은 난독화 · 데이터셋 1", "d2": "섞은 난독화 · 데이터셋 2"}
+DATA = {"single": "단일 난독화", "d1": "복합 난독화 · 데이터셋 1", "d2": "복합 난독화 · 데이터셋 2"}
 
 
 def load(run: str) -> dict:
@@ -91,7 +91,7 @@ def grouped(categories, lo, hi, title, xlabel, name, rot=0):
 def slide1() -> dict:
     keys = list(RUNS)
     vals = {k: detect(*RUNS[k])["all"] for k in keys}
-    short = {"single": "단일", "d1": "섞은 1", "d2": "섞은 2"}
+    short = {"single": "단일", "d1": "복합 1", "d2": "복합 2"}
     grouped([f"{f}\n{short[d]}" for f, d in keys], [vals[k][0] for k in keys], [vals[k][1] for k in keys],
             "난독화된 욕설 감지율", "필터 · 데이터셋", "slide_1_detection.png")
     return vals
@@ -102,7 +102,7 @@ def slide2() -> dict:
     ns = sorted(k for k in d if d[k][2] > 100)
     xs = [int(k.split("=")[1]) for k in ns]
     lo, hi = [d[k][0] for k in ns], [d[k][1] for k in ns]
-    grouped([f"{x}개" for x in xs], lo, hi, "섞은 기법 수별 감지율 (kor_unsmile, 데이터셋 1)", "한 문장에 섞은 기법 수",
+    grouped([f"{x}개" for x in xs], lo, hi, "복합 난독화 기법 수별 감지율 (kor_unsmile, 데이터셋 1)", "한 문장에 적용한 기법 수",
             "slide_2_mixed.png")
     return {"ns": xs, "lo": lo, "hi": hi}
 
@@ -151,8 +151,9 @@ def text(v1, v2, v3) -> str:
 
 - **평가 문장**: 공개 커뮤니티 댓글 욕설 데이터(Curse-detection, 5,825문장 중 욕설 2,044문장)
 - **단일 난독화**: 욕설 문장마다 난독화 기법 하나씩 적용(24개 기법)
-- **섞은 난독화 · 데이터셋 1**: 한 문장에 기법 1~4개를 섞음. 우리 라이브러리가 복원하도록 설계된 9개 유형만 사용
-- **섞은 난독화 · 데이터셋 2**: 한 문장에 기법 2~4개를 섞음. 복원 범위 밖의 모양 바꾸기(야민정음·닮은 외국문자 등)까지 포함한 더 현실적인 조건
+- **복합 난독화**: 한 문장에 난독화 기법 여러 개를 동시에 적용한 것(예: 된소리 + 받침 추가 + 기호 삽입)
+- **복합 난독화 · 데이터셋 1**: 한 문장에 기법 1~4개를 적용. 우리 라이브러리가 복원하도록 설계된 9개 유형만 사용
+- **복합 난독화 · 데이터셋 2**: 한 문장에 기법 2~4개를 적용. 복원 범위 밖의 모양 바꾸기(야민정음·닮은 외국문자 등)까지 포함한 더 현실적인 조건
 - **우리 라이브러리 적용 방식**: 기존 필터는 그대로 두고, 원문과 복원문을 둘 다 검사해 하나라도 걸리면 차단
 - **기존 필터**: kor_unsmile(공개 ML 분류기), korcen(공개 규칙 기반 필터)
 
@@ -165,9 +166,9 @@ def text(v1, v2, v3) -> str:
 
 ## 슬라이드 2 — `slide_2_mixed.png`
 
-- 제목: **섞을수록 기존 필터는 무너지고, 우리 라이브러리와의 차이는 벌어진다**
-- 한 줄 설명: kor_unsmile, 한 문장에 섞은 난독화 기법 수별 감지율(데이터셋 1)
-- 말할 거리: 기법 4개를 섞으면 기존 필터는 {v2['lo'][-1]:.0f}%만 잡지만, 우리 라이브러리를 붙이면 {v2['hi'][-1]:.0f}%(+{v2['hi'][-1] - v2['lo'][-1]:.0f}%p)
+- 제목: **기법을 겹칠수록 기존 필터는 무너지고, 우리 라이브러리와의 차이는 벌어진다**
+- 한 줄 설명: kor_unsmile, 한 문장에 적용한 난독화 기법 수별 감지율(복합 난독화 데이터셋 1)
+- 말할 거리: 기법 4개를 겹치면 기존 필터는 {v2['lo'][-1]:.0f}%만 잡지만, 우리 라이브러리를 붙이면 {v2['hi'][-1]:.0f}%(+{v2['hi'][-1] - v2['lo'][-1]:.0f}%p)
 - 각주: 데이터셋 2(복원 범위 밖 유형 포함)에서도 +12~14%p 차이 유지
 
 ## 슬라이드 3 — `slide_3_by_type.png`
