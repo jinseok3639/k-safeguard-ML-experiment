@@ -1,0 +1,172 @@
+{
+  "data": "ko-hangul",
+  "data_commit": "747a75e096761ebc01bd3970158827326b4add23",
+  "guard_runs": [
+    "p03.16-kanana-ko-hangul"
+  ],
+  "llm_runs": [
+    "p03.26-gemma4-e4b-ko-hangul",
+    "p03.34-gemma4-12b-ko-hangul",
+    "p03.42-gemma4-31b-ko-hangul",
+    "p03.50-qwen35-4b-ko-hangul",
+    "p03.58-qwen35-9b-ko-hangul"
+  ],
+  "pairs": {
+    "p03.26-gemma4-e4b-ko-hangul__p03.16-kanana-ko-hangul": {
+      "attack_passed": {
+        "ci95": [
+          0.1304948664172474,
+          0.1904341725533617
+        ],
+        "k": 90,
+        "n": 569,
+        "rate": 0.15817223198594024
+      },
+      "guard_run": "p03.16-kanana-ko-hangul",
+      "guarded_defense_validity": {
+        "ci95": [
+          0.6389176347656025,
+          0.7154561572368818
+        ],
+        "k": 386,
+        "n": 569,
+        "rate": 0.6783831282952548
+      },
+      "guarded_leak": {
+        "ci95": [
+          0.02147973365592079,
+          0.051562219283393926
+        ],
+        "k": 19,
+        "n": 569,
+        "rate": 0.033391915641476276
+      },
+      "llm_run": "p03.26-gemma4-e4b-ko-hangul"
+    },
+    "p03.34-gemma4-12b-ko-hangul__p03.16-kanana-ko-hangul": {
+      "attack_passed": {
+        "ci95": [
+          0.1304948664172474,
+          0.1904341725533617
+        ],
+        "k": 90,
+        "n": 569,
+        "rate": 0.15817223198594024
+      },
+      "guard_run": "p03.16-kanana-ko-hangul",
+      "guarded_defense_validity": {
+        "ci95": [
+          0.7444793749617206,
+          0.812393726756469
+        ],
+        "k": 444,
+        "n": 569,
+        "rate": 0.7803163444639719
+      },
+      "guarded_leak": {
+        "ci95": [
+          0.024264134708161276,
+          0.05576055304893636
+        ],
+        "k": 21,
+        "n": 569,
+        "rate": 0.03690685413005272
+      },
+      "llm_run": "p03.34-gemma4-12b-ko-hangul"
+    },
+    "p03.42-gemma4-31b-ko-hangul__p03.16-kanana-ko-hangul": {
+      "attack_passed": {
+        "ci95": [
+          0.1304948664172474,
+          0.1904341725533617
+        ],
+        "k": 90,
+        "n": 569,
+        "rate": 0.15817223198594024
+      },
+      "guard_run": "p03.16-kanana-ko-hangul",
+      "guarded_defense_validity": {
+        "ci95": [
+          0.5869596459731813,
+          0.6661644911714503
+        ],
+        "k": 357,
+        "n": 569,
+        "rate": 0.6274165202108963
+      },
+      "guarded_leak": {
+        "ci95": [
+          0.005971733392710829,
+          0.02517381063990623
+        ],
+        "k": 7,
+        "n": 569,
+        "rate": 0.012302284710017574
+      },
+      "llm_run": "p03.42-gemma4-31b-ko-hangul"
+    },
+    "p03.50-qwen35-4b-ko-hangul__p03.16-kanana-ko-hangul": {
+      "attack_passed": {
+        "ci95": [
+          0.1304948664172474,
+          0.1904341725533617
+        ],
+        "k": 90,
+        "n": 569,
+        "rate": 0.15817223198594024
+      },
+      "guard_run": "p03.16-kanana-ko-hangul",
+      "guarded_defense_validity": {
+        "ci95": [
+          0.4756616754278153,
+          0.5575063149566538
+        ],
+        "k": 294,
+        "n": 569,
+        "rate": 0.5166959578207382
+      },
+      "guarded_leak": {
+        "ci95": [
+          0.04604783351778642,
+          0.08634736537268327
+        ],
+        "k": 36,
+        "n": 569,
+        "rate": 0.0632688927943761
+      },
+      "llm_run": "p03.50-qwen35-4b-ko-hangul"
+    },
+    "p03.58-qwen35-9b-ko-hangul__p03.16-kanana-ko-hangul": {
+      "attack_passed": {
+        "ci95": [
+          0.1304948664172474,
+          0.1904341725533617
+        ],
+        "k": 90,
+        "n": 569,
+        "rate": 0.15817223198594024
+      },
+      "guard_run": "p03.16-kanana-ko-hangul",
+      "guarded_defense_validity": {
+        "ci95": [
+          0.41470375961118866,
+          0.49626637146207886
+        ],
+        "k": 259,
+        "n": 569,
+        "rate": 0.45518453427065025
+      },
+      "guarded_leak": {
+        "ci95": [
+          0.028505794878999444,
+          0.0619929951047726
+        ],
+        "k": 24,
+        "n": 569,
+        "rate": 0.0421792618629174
+      },
+      "llm_run": "p03.58-qwen35-9b-ko-hangul"
+    }
+  },
+  "rule": "flagged=true면 LLM에 닿지 않음, null은 통과"
+}
