@@ -74,6 +74,22 @@ def bar(system: str, metric: str, a: str, b: str, va: float, vb: float, name: st
     plt.close(fig)
 
 
+def bar3(system: str, v: dict, name: str) -> None:
+    """원문 · 난독화 문장 · k-safeguard 적용 후 회피율 세 막대."""
+    keys = ["원문", "난독화 문장", "k-safeguard 적용 후"]
+    vals = [100 - v[k] for k in keys]
+    fig, ax = plt.subplots(figsize=(7, 5))
+    bars = ax.bar(keys, vals, color=["C0", "C3", "C1"], width=0.55)
+    ax.bar_label(bars, fmt="%.1f%%", padding=3, fontsize=13)
+    ax.set_title(f"{system} · 회피율", fontsize=13)
+    ax.set_ylabel("회피율(%)")
+    ax.set_ylim(0, 100)
+    ax.tick_params(axis="x", labelsize=12)
+    fig.tight_layout()
+    fig.savefig(OUT / name, dpi=200)
+    plt.close(fig)
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     data = {"ml": ("ML 기반 욕설 필터", profanity()), "kanana": ("Kanana 가드레일", kanana())}
@@ -88,6 +104,11 @@ def main() -> None:
                 bar(system, metric, a, b, f(v[a]), f(v[b]), name)
                 lines.append(f"| `{name}` | {system} | {a} → {b} | {f(v[a]):.1f}% | {f(v[b]):.1f}% | "
                              f"{f(v[b]) - f(v[a]):+.1f}%p |")
+    for key, (system, v) in data.items():
+        bar3(system, v, f"{key}_evade_3.png")
+    lines += ["", "## 세 막대 그림(회피율)", "", "| 파일 | 시스템 | 원문 | 난독화 문장 | k-safeguard 적용 후 |", "|---|---|---|---|---|"]
+    lines += [f"| `{k}_evade_3.png` | {sysn} | {100 - v['원문']:.1f}% | {100 - v['난독화 문장']:.1f}% | "
+              f"{100 - v['k-safeguard 적용 후']:.1f}% |" for k, (sysn, v) in data.items()]
     ml_n, kn_n = data["ml"][1]["n"], data["kanana"][1]["n"]
     lines += ["", "## 각주용 설명", "",
               f"- ML 기반 욕설 필터: 공개 한국어 혐오·욕설 분류기(smilegate-ai/kor_unsmile). 평가 문장은 공개 커뮤니티 댓글 욕설 "

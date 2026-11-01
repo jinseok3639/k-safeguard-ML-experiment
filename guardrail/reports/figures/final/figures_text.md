@@ -14,6 +14,13 @@ k-safeguard 적용 후는 원문과 정규화한 문장을 둘 다 검사해 하
 | `kanana_norm_detect.png` | Kanana 가드레일 | 난독화 문장 → k-safeguard 적용 후 | 66.6% | 79.7% | +13.1%p |
 | `kanana_norm_evade.png` | Kanana 가드레일 | 난독화 문장 → k-safeguard 적용 후 | 33.4% | 20.3% | -13.1%p |
 
+## 세 막대 그림(회피율)
+
+| 파일 | 시스템 | 원문 | 난독화 문장 | k-safeguard 적용 후 |
+|---|---|---|---|---|
+| `ml_evade_3.png` | ML 기반 욕설 필터 | 27.1% | 38.0% | 24.7% |
+| `kanana_evade_3.png` | Kanana 가드레일 | 6.0% | 33.4% | 20.3% |
+
 ## 각주용 설명
 
 - ML 기반 욕설 필터: 공개 한국어 혐오·욕설 분류기(smilegate-ai/kor_unsmile). 평가 문장은 공개 커뮤니티 댓글 욕설 2,044문장과 그 복합 난독화본 12,222행
