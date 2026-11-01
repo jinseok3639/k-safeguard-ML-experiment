@@ -1,6 +1,7 @@
-"""p05 발표용 슬라이드 그림 — 그래프와 범례만 그린다. 제목·설명·각주는 PPT에서 쓰도록 `slides_text.md`로 따로 낸다.
+"""p05 발표용 슬라이드 그림 — matplotlib 기본 테마(기본 색 C0·C1, 한글 글꼴만 지정)의 묶음 막대그래프.
+슬라이드 문구(제목·설명·각주)는 PPT에서 쓰도록 `slides_text.md`로 따로 낸다.
 
-기존 필터는 회색, 우리 라이브러리는 파란색 하나로 강조한다. "우리 라이브러리"는 원문 OR 복원문 결합(실행 전 등록 구성,
+막대는 기존 필터만(C0 파랑)과 기존 필터 + 우리 라이브러리(C1 주황)다. "우리 라이브러리"는 원문 OR 복원문 결합(실행 전 등록 구성,
 p05-mixed-obfuscation)이고, 지표는 난독화된 욕설 중 차단된 비율(감지율)이다. 모든 수치는 results/p05.*/scores.jsonl에서
 다시 계산한다.
 
@@ -19,16 +20,11 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
 
 ROOT = Path(__file__).resolve().parents[3]
 RES, OUT = ROOT / "guardrail" / "results", ROOT / "guardrail" / "reports" / "figures" / "p05"
-plt.rcParams.update({"font.family": "Malgun Gothic", "axes.unicode_minus": False})
+plt.rcParams.update({"font.family": "Malgun Gothic", "axes.unicode_minus": False})   # 한글 글꼴만. 나머지는 matplotlib 기본
 
-SURF, INK, INK2, GRID = "#ffffff", "#141413", "#5f5e5a", "#ebeae6"
-OURS, BASE = "#2a78d6", "#7d7c77"
-W, H = 13.33, 6.4                       # PPT 제목 아래 본문 영역(16:9 슬라이드의 약 85%)
-PCT = FuncFormatter(lambda v, _: f"{v:.0f}%")
 
 NAME = {"jamo_decompose": "자모 분해", "phon_insert": "받침·반모음 추가", "spacing": "띄어쓰기", "symbol_insert": "기호 삽입",
         "phon_vowel": "모음 교체", "phon_initial": "초성 교체·된소리", "shape_foreign": "닮은 외국문자", "chosung": "초성체",
@@ -67,49 +63,37 @@ def clean_fpr(base: str, restored: str) -> tuple[float, float]:
             100 * sum(b[i]["flagged"] or r[i]["flagged"] for i in neg) / len(neg))
 
 
-def figure(legend: bool = True):
-    fig = plt.figure(figsize=(W, H), facecolor=SURF)
-    if legend:
-        fig.text(0.04, 0.93, "●", color=BASE, fontsize=24, va="center")
-        fig.text(0.07, 0.93, "기존 필터만", color=INK, fontsize=20, va="center")
-        fig.text(0.25, 0.93, "●", color=OURS, fontsize=24, va="center")
-        fig.text(0.28, 0.93, "기존 필터 + 우리 라이브러리", color=INK, fontsize=20, va="center", fontweight="bold")
-    return fig
+FIGSIZE = (10, 5.5)
+LABELS = ("기존 필터만", "기존 필터 + 우리 라이브러리")
 
 
-def clean(ax, grid="x"):
-    ax.set_facecolor(SURF)
-    for s in ax.spines.values():
-        s.set_visible(False)
-    ax.tick_params(length=0, colors=INK2, labelsize=18)
-    getattr(ax, f"{grid}axis").grid(True, color=GRID, lw=1.2)
-    ax.set_axisbelow(True)
-
-
-def dumbbell(ax, labels, pairs, xlim, delta_x):
-    ys = list(range(len(labels)))[::-1]
-    for y, (lo, hi) in zip(ys, pairs):
-        ax.plot([lo, hi], [y, y], color=OURS, lw=6, alpha=0.22, solid_capstyle="round", zorder=1)
-        ax.scatter([lo], [y], s=420, color=BASE, zorder=3, edgecolor=SURF, linewidth=3)
-        ax.scatter([hi], [y], s=520, color=OURS, zorder=4, edgecolor=SURF, linewidth=3)
-        ax.text(lo - 1.6, y, f"{lo:.0f}%", ha="right", va="center", fontsize=20, color=INK2)
-        ax.text(hi + 1.6, y, f"{hi:.0f}%", ha="left", va="center", fontsize=22, color=INK, fontweight="bold")
-        ax.text(delta_x, y, f"+{hi - lo:.0f}%p", ha="left", va="center", fontsize=24, color=OURS, fontweight="bold")
-    ax.set_yticks(ys); ax.set_yticklabels(labels, fontsize=19, color=INK)
-    ax.set_xlim(*xlim); ax.set_ylim(-0.6, len(labels) - 0.4)
-    ax.xaxis.set_major_formatter(PCT)
+def grouped(categories, lo, hi, title, xlabel, name, rot=0):
+    """matplotlib 기본 테마의 묶음 막대그래프. 막대 위에 값을 적는다."""
+    fig, ax = plt.subplots(figsize=FIGSIZE)
+    x = list(range(len(categories)))
+    w = 0.38
+    b1 = ax.bar([i - w / 2 for i in x], lo, w, label=LABELS[0])
+    b2 = ax.bar([i + w / 2 for i in x], hi, w, label=LABELS[1])
+    ax.bar_label(b1, fmt="%.0f%%", padding=2)
+    ax.bar_label(b2, fmt="%.0f%%", padding=2)
+    ax.set_xticks(x)
+    ax.set_xticklabels(categories, rotation=rot)
+    ax.set_ylim(0, 100)
+    ax.set_ylabel("감지율(%)")
+    ax.set_xlabel(xlabel)
+    ax.set_title(title)
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(OUT / name, dpi=200)
+    plt.close(fig)
 
 
 def slide1() -> dict:
     keys = list(RUNS)
     vals = {k: detect(*RUNS[k])["all"] for k in keys}
-    fig = figure()
-    ax = fig.add_axes([0.37, 0.09, 0.58, 0.75]); clean(ax)
-    labels = [f"{f} · {DATA[d]}" if d != "single" else f"{f} · {DATA[d]}" for f, d in keys]
-    dumbbell(ax, labels, [vals[k][:2] for k in keys], (30, 100), 90)
-    ax.axhline(1.5, color=GRID, lw=2)
-    fig.savefig(OUT / "slide_1_detection.png", dpi=200, facecolor=SURF)
-    plt.close(fig)
+    short = {"single": "단일", "d1": "섞은 1", "d2": "섞은 2"}
+    grouped([f"{f}\n{short[d]}" for f, d in keys], [vals[k][0] for k in keys], [vals[k][1] for k in keys],
+            "난독화된 욕설 감지율", "필터 · 데이터셋", "slide_1_detection.png")
     return vals
 
 
@@ -118,49 +102,31 @@ def slide2() -> dict:
     ns = sorted(k for k in d if d[k][2] > 100)
     xs = [int(k.split("=")[1]) for k in ns]
     lo, hi = [d[k][0] for k in ns], [d[k][1] for k in ns]
-    fig = figure()
-    ax = fig.add_axes([0.08, 0.14, 0.80, 0.70]); clean(ax, "y")
-    ax.fill_between(xs, lo, hi, color=OURS, alpha=0.10, lw=0)
-    ax.plot(xs, lo, color=BASE, lw=5, marker="o", ms=18, mec=SURF, mew=3)
-    ax.plot(xs, hi, color=OURS, lw=5.5, marker="o", ms=19, mec=SURF, mew=3)
-    for x, a, b in zip(xs, lo, hi):
-        ax.text(x, a - 3.6, f"{a:.0f}%", ha="center", va="top", fontsize=21, color=INK2)
-        ax.text(x, b + 3.0, f"{b:.0f}%", ha="center", va="bottom", fontsize=22, color=INK, fontweight="bold")
-    ax.text(xs[-1] + 0.14, (lo[-1] + hi[-1]) / 2, f"+{hi[-1] - lo[-1]:.0f}%p", fontsize=30, color=OURS,
-            fontweight="bold", va="center")
-    ax.set_xticks(xs); ax.set_xticklabels([f"기법 {x}개" for x in xs], fontsize=20, color=INK)
-    ax.set_xlim(xs[0] - 0.35, xs[-1] + 0.75); ax.set_ylim(30, 90)
-    ax.yaxis.set_major_formatter(PCT)
-    fig.savefig(OUT / "slide_2_mixed.png", dpi=200, facecolor=SURF)
-    plt.close(fig)
+    grouped([f"{x}개" for x in xs], lo, hi, "섞은 기법 수별 감지율 (kor_unsmile, 데이터셋 1)", "한 문장에 섞은 기법 수",
+            "slide_2_mixed.png")
     return {"ns": xs, "lo": lo, "hi": hi}
 
 
 def slide3() -> dict:
     d = detect(*RUNS[("kor_unsmile", "single")], key=lambda x: x["type"])
-    top = sorted(d, key=lambda k: -(d[k][1] - d[k][0]))[:6]
-    fig = figure()
-    ax = fig.add_axes([0.25, 0.09, 0.70, 0.75]); clean(ax)
-    dumbbell(ax, [NAME[k] for k in top], [d[k][:2] for k in top], (40, 100), 91.5)
-    fig.savefig(OUT / "slide_3_by_type.png", dpi=200, facecolor=SURF)
-    plt.close(fig)
-    return {k: d[k] for k in sorted(d, key=lambda k: -(d[k][1] - d[k][0]))}
+    order = sorted(d, key=lambda k: -(d[k][1] - d[k][0]))
+    top = order[:6]
+    grouped([NAME[k] for k in top], [d[k][0] for k in top], [d[k][1] for k in top],
+            "난독화 유형별 감지율 (kor_unsmile, 단일 난독화, 향상폭 상위 6유형)", "난독화 유형", "slide_3_by_type.png")
+    return {k: d[k] for k in order}
 
 
 def slide4() -> list:
-    models = [("우리 라이브러리", 0.129, OURS), ("LLM 해제 모델 A", 7.6, BASE),
-              ("LLM 해제 모델 B", 7.8, BASE), ("LLM 해제 모델 C", 8.0, BASE)]
-    fig = figure(legend=False)
-    ax = fig.add_axes([0.22, 0.10, 0.72, 0.82]); clean(ax)
-    ys = list(range(len(models)))[::-1]
-    for y, (n, v, c) in zip(ys, models):
-        ax.barh(y, v, height=0.6, color=c, edgecolor=SURF, linewidth=3)
-        ax.text(v + 0.15, y, f"{v:g}B" if v >= 1 else f"{v * 1000:.0f}M", va="center", fontsize=24,
-                color=OURS if c == OURS else INK, fontweight="bold" if c == OURS else "normal")
-    ax.set_yticks(ys); ax.set_yticklabels([m[0] for m in models], fontsize=20, color=INK)
-    ax.get_yticklabels()[0].set_fontweight("bold")
-    ax.set_xlim(0, 9.2); ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}B"))
-    fig.savefig(OUT / "slide_4_size.png", dpi=200, facecolor=SURF)
+    models = [("우리 라이브러리", 0.129), ("LLM 해제 모델 A", 7.6), ("LLM 해제 모델 B", 7.8), ("LLM 해제 모델 C", 8.0)]
+    fig, ax = plt.subplots(figsize=FIGSIZE)
+    bars = ax.bar([m[0] for m in models], [m[1] for m in models], color=["C1", "C0", "C0", "C0"])
+    ax.bar_label(bars, labels=["0.129B", "7.6B", "7.8B", "8.0B"], padding=2)
+    ax.set_ylabel("파라미터 수(십억 개)")
+    ax.set_xlabel("난독화 복원 모델")
+    ax.set_title("복원 모델 크기 비교")
+    ax.set_ylim(0, 9)
+    fig.tight_layout()
+    fig.savefig(OUT / "slide_4_size.png", dpi=200)
     plt.close(fig)
     return models
 
