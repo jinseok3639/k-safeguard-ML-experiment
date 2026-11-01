@@ -117,14 +117,20 @@ def slide3() -> dict:
 
 
 def slide4() -> list:
+    """크기 차이가 약 60배라 같은 눈금이면 우리 막대가 안 보인다. 로그 축에 배수를 함께 적는다."""
     models = [("우리 라이브러리", 0.129), ("LLM 해제 모델 A", 7.6), ("LLM 해제 모델 B", 7.8), ("LLM 해제 모델 C", 8.0)]
+    ours = models[0][1]
     fig, ax = plt.subplots(figsize=FIGSIZE)
     bars = ax.bar([m[0] for m in models], [m[1] for m in models], color=["C1", "C0", "C0", "C0"])
-    ax.bar_label(bars, labels=["0.129B", "7.6B", "7.8B", "8.0B"], padding=2)
-    ax.set_ylabel("파라미터 수(십억 개)")
+    labels = ["0.129B (1.29억)"] + [f"{v:.1f}B (우리의 {v / ours:.0f}배)" for _, v in models[1:]]
+    ax.bar_label(bars, labels=labels, padding=2)
+    ax.set_yscale("log")
+    ax.set_ylim(0.05, 30)
+    ax.set_yticks([0.1, 1, 10])
+    ax.set_yticklabels(["0.1B", "1B", "10B"])
+    ax.set_ylabel("파라미터 수(로그 눈금)")
     ax.set_xlabel("난독화 복원 모델")
     ax.set_title("복원 모델 크기 비교")
-    ax.set_ylim(0, 9)
     fig.tight_layout()
     fig.savefig(OUT / "slide_4_size.png", dpi=200)
     plt.close(fig)
@@ -174,7 +180,7 @@ def text(v1, v2, v3) -> str:
 ## 슬라이드 4 — `slide_4_size.png`
 
 - 제목: **LLM 기반 해제 모델의 약 1/60 크기**
-- 한 줄 설명: 난독화 복원 모델의 파라미터 수
+- 한 줄 설명: 난독화 복원 모델의 파라미터 수(세로축은 10배 단위 로그 눈금)
 - 말할 거리: 우리 라이브러리 1.29억 개, LLM 해제 모델 76억~80억 개. 문장 하나 처리 시간 GPU 약 7ms(p50)
 - 각주: LLM 해제 모델 A·B·C는 KOTOX 연구(arXiv 2510.10961)가 공개한 Qwen2.5-7B·EXAONE-3.5-7.8B·Bllossom-8B 기반 모델. 크기만 비교했고 속도·정확도는 같은 조건에서 재지 않았다
 """
