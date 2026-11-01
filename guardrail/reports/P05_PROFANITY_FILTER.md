@@ -10,7 +10,14 @@
 
 ## 그림
 
-발표용 그림은 `reports/figures/p05/`에 있다(`exp/p05_profanity/make_figures.py`로 다시 만든다).
+발표용 그림은 `reports/figures/p05/`에 있다. `slide_*.png`(16:9, `exp/p05_profanity/make_slides.py`)가 발표용이다. 기존 필터는 회색, 우리 라이브러리(원문 OR 복원문)는 파란색이고, 지표는 난독화된 욕설 감지율이다. 아래 1~5는 분석용 그림이다(`make_figures.py`).
+
+| 슬라이드 | 내용 |
+|---|---|
+| [slide_1](./figures/p05/slide_1_detection.png) | 조건 5개의 난독화 욕설 감지율, 필터 단독 대비 +4.3~17.0%p |
+| [slide_2](./figures/p05/slide_2_mixed.png) | 섞은 기법 수별 감지율(kor_unsmile), 4개에서 +20%p |
+| [slide_3](./figures/p05/slide_3_by_type.png) | 유형별 상위 7개, 자모 분해 +20.2%p |
+| [slide_4](./figures/p05/slide_4_size.png) | KOTOX 해제 모델 대비 파라미터 수 약 1/60 |
 
 | 그림 | 내용 |
 |---|---|
