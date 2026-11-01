@@ -12,7 +12,7 @@
 | **S02 LLM 이해도** (`s02-llm-understanding`) | P03 LLM 강건성 | 난독화된 공격을 LLM이 알아듣나 | 2 + 판정자 | 리뷰 전 | [S02](./reports/S02_LLM_UNDERSTANDING.md) |
 | **P05 욕설 필터 난독화 내성과 복원** (`p05-profanity-filter`) | P05 욕설 필터 | 공개 욕설 필터가 얼마나 뚫리고 복원기가 얼마나 되찾나 | 4 | 승인됨 | [P05](./reports/P05_PROFANITY_FILTER.md) |
 | **P05 섞은 난독화** (`p05-mixed-obfuscation`) | P05 욕설 필터 | 기법을 섞으면 더 뚫리나, 복원기·OR 결합이 되찾나 | 8 | 승인됨 | [P05 5절](./reports/P05_PROFANITY_FILTER.md) |
-| **P02 최종 복원기 + Kanana** (`p02-kanana-restorer`) | P02 가드레일 다중 | 최종 복원기를 붙이면 S01 Kanana 우회율이 얼마나 주나 | 1 | 리뷰 전 | [P02](./reports/P02_KANANA_RESTORER.md) |
+| **P02 최종 복원기 + Kanana** (`p02-kanana-restorer`) | P02 가드레일 다중 | 최종 복원기를 붙이면 S01 Kanana 우회율이 얼마나 주나 | 1 | 승인됨 | [P02](./reports/P02_KANANA_RESTORER.md) |
 | **P03 Tensor Trust 비밀값 추출** (`p03-secret-extraction`) | P03 LLM 강건성 | 실제 추출 공격이 한국어 LLM과 가드레일에 통하나(원문·번역본) | 10 (`p03.3`~`p03.12`) | 승인됨 | [P03](./reports/P03_SECRET_EXTRACTION.md) |
 | **P03 번역본 난독화 비밀값 추출** (`p03-obf-extraction`) | P03 LLM 강건성 | 번역본 공격을 난독화하면 가드레일 앞단 유출이 오르나 | 6 (`p03.13`~`p03.18`) | 승인됨 | [P03 난독화](./reports/P03_OBF_EXTRACTION.md) |
 | **P03 모델 크기·난독화 기법 확장** (`p03-model-scale`) | P03 LLM 강건성 | 큰 모델·더 많은 기법·적응형 공격에서 앞단 유출이 오르나 | 52 (결과 49, 미실행 3) | 승인됨 | [P03 확장](./reports/P03_MODEL_SCALE.md) |
