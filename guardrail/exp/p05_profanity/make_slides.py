@@ -112,17 +112,17 @@ def slide3() -> dict:
     order = sorted(d, key=lambda k: -(d[k][1] - d[k][0]))
     top = order[:6]
     grouped([NAME[k] for k in top], [d[k][0] for k in top], [d[k][1] for k in top],
-            "난독화 유형별 감지율 (kor_unsmile, 단일 기법, 향상폭 상위 6유형)", "난독화 유형", "slide_3_by_type.png")
+            "난독화 유형별 감지율", "난독화 유형", "slide_3_by_type.png")
     return {k: d[k] for k in order}
 
 
 def slide4() -> list:
     """크기 차이가 약 60배라 같은 눈금이면 우리 막대가 안 보인다. 로그 축에 배수를 함께 적는다."""
-    models = [("우리 라이브러리", 0.129), ("LLM 해제 모델 A", 7.6), ("LLM 해제 모델 B", 7.8), ("LLM 해제 모델 C", 8.0)]
+    models = [("k-safeguard", 0.129), ("LLM 해제 모델 A", 7.6), ("LLM 해제 모델 B", 7.8), ("LLM 해제 모델 C", 8.0)]
     ours = models[0][1]
     fig, ax = plt.subplots(figsize=FIGSIZE)
     bars = ax.bar([m[0] for m in models], [m[1] for m in models], color=["C1", "C0", "C0", "C0"])
-    labels = ["0.129B (1.29억)"] + [f"{v:.1f}B (우리의 {v / ours:.0f}배)" for _, v in models[1:]]
+    labels = ["0.129B"] + [f"{v:.1f}B ({v / ours:.0f}배)" for _, v in models[1:]]
     ax.bar_label(bars, labels=labels, padding=2)
     ax.set_yscale("log")
     ax.set_ylim(0.05, 30)
@@ -174,7 +174,7 @@ def text(v1, v2, v3) -> str:
 ## 슬라이드 3 — `slide_3_by_type.png`
 
 - 제목: **가장 크게 되찾는 난독화 유형**
-- 한 줄 설명: kor_unsmile, 난독화 유형별 감지율(단일 기법, 향상폭 상위 6유형)
+- 한 줄 설명(그림 제목에서 뺀 조건): kor_unsmile 필터, 단일 기법 데이터, 향상폭 상위 6유형
 - 말할 거리: 자모 분해(ㅅ ㅣ ㅂ ㅏ ㄹ 식) {t[0][1][0]:.0f}% → {t[0][1][1]:.0f}%, 받침·반모음 추가 {t[1][1][0]:.0f}% → {t[1][1][1]:.0f}%
 - 각주: 나머지 유형은 {rest}. 초성체는 현재 복원 범위 밖, 닮은 외국문자·야민정음·음절 늘이기는 경계(복원 여부 미정)
 
@@ -182,7 +182,7 @@ def text(v1, v2, v3) -> str:
 
 - 제목: **LLM 기반 해제 모델의 약 1/60 크기**
 - 한 줄 설명: 난독화 복원 모델의 파라미터 수(세로축은 10배 단위 로그 눈금)
-- 말할 거리: 우리 라이브러리 1.29억 개, LLM 해제 모델 76억~80억 개. 문장 하나 처리 시간 GPU 약 7ms(p50)
+- 말할 거리: k-safeguard 1.29억 개, LLM 해제 모델 76억~80억 개(k-safeguard의 59~62배). 문장 하나 처리 시간 GPU 약 7ms(p50)
 - 각주: LLM 해제 모델 A·B·C는 KOTOX 연구(arXiv 2510.10961)가 공개한 Qwen2.5-7B·EXAONE-3.5-7.8B·Bllossom-8B 기반 모델. 크기만 비교했고 속도·정확도는 같은 조건에서 재지 않았다
 """
 
